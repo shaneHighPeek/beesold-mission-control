@@ -108,17 +108,19 @@ export function IntakeClient({ token }: { token: string }) {
 
   if (!data || !currentStep) {
     return (
-      <main>
+      <div className="card">
         <p>Loading intake session...</p>
-      </main>
+      </div>
     );
   }
 
-  const completion = Math.round((activeStep / data.session.totalSteps) * 100);
+  const sessionData = data;
+  const stepDef = currentStep;
+  const completion = Math.round((activeStep / sessionData.session.totalSteps) * 100);
 
   const validateCurrent = () => {
     const nextErrors: Record<string, string> = {};
-    currentStep.fields.forEach((field) => {
+    stepDef.fields.forEach((field) => {
       if (!field.required) return;
       const value = formState[field.name];
       if (typeof value !== "string" || !value.trim()) {
@@ -130,7 +132,7 @@ export function IntakeClient({ token }: { token: string }) {
   };
 
   async function saveAndAdvance() {
-    if (currentStep.key !== "documents" && currentStep.key !== "review" && !validateCurrent()) {
+    if (stepDef.key !== "documents" && stepDef.key !== "review" && !validateCurrent()) {
       return;
     }
 
@@ -139,16 +141,16 @@ export function IntakeClient({ token }: { token: string }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         token,
-        stepKey: currentStep.key,
+        stepKey: stepDef.key,
         data: formState,
-        currentStep: Math.min(activeStep + 1, data.session.totalSteps),
+        currentStep: Math.min(activeStep + 1, sessionData.session.totalSteps),
         markComplete: true,
       }),
     });
 
     setMessage("Progress saved.");
     await refresh();
-    setActiveStep((value) => Math.min(value + 1, data.session.totalSteps));
+    setActiveStep((value) => Math.min(value + 1, sessionData.session.totalSteps));
   }
 
   async function addAsset() {
@@ -173,28 +175,28 @@ export function IntakeClient({ token }: { token: string }) {
   }
 
   return (
-    <main className="grid" style={{ gap: "1rem" }}>
+    <section className="grid" style={{ gap: "1rem" }}>
       <header className="card">
-        <h1>Secure Client Intake</h1>
+        <h2>Secure Client Intake</h2>
         <p>
-          Status: <span className="badge">{data.session.status}</span>
+          Lifecycle status <span className="badge">{data.session.status}</span>
         </p>
         <div className="progress" aria-label="intake completion progress">
           <span style={{ width: `${completion}%` }} />
         </div>
         <p className="small">
-          Step {activeStep} of {data.session.totalSteps}. Autosave active.
+          Step {activeStep} of {sessionData.session.totalSteps}. Autosave active.
         </p>
       </header>
 
       <section className="card">
-        <h2>{currentStep.title}</h2>
-        <p>{currentStep.description}</p>
-        <p className="small">Help: {currentStep.helpText}</p>
+        <h2>{stepDef.title}</h2>
+        <p>{stepDef.description}</p>
+        <p className="small">Help: {stepDef.helpText}</p>
 
-        {currentStep.key !== "documents" && currentStep.key !== "review" && (
+        {stepDef.key !== "documents" && stepDef.key !== "review" && (
           <div>
-            {currentStep.fields.map((field) => (
+            {stepDef.fields.map((field) => (
               <label className="field" key={field.name}>
                 <span>
                   {field.label}
@@ -212,7 +214,7 @@ export function IntakeClient({ token }: { token: string }) {
           </div>
         )}
 
-        {currentStep.key === "documents" && (
+        {stepDef.key === "documents" && (
           <div className="grid two">
             <div>
               <h3>Upload Placeholder</h3>
@@ -268,11 +270,11 @@ export function IntakeClient({ token }: { token: string }) {
           </div>
         )}
 
-        {currentStep.key === "review" && (
+        {stepDef.key === "review" && (
           <div className="grid" style={{ gap: "0.6rem" }}>
             <h3>Review Before Submission</h3>
             {data.steps.map((step) => (
-              <div key={step.stepKey} className="card">
+              <div key={step.stepKey} className="card" style={{ background: "#f8f9ff" }}>
                 <strong>{step.stepKey}</strong>
                 <pre className="small">{JSON.stringify(step.data, null, 2)}</pre>
               </div>
@@ -291,7 +293,7 @@ export function IntakeClient({ token }: { token: string }) {
           >
             Back
           </button>
-          {activeStep < data.session.totalSteps && (
+          {activeStep < sessionData.session.totalSteps && (
             <button className="primary" onClick={saveAndAdvance}>
               Save and Continue
             </button>
@@ -299,6 +301,6 @@ export function IntakeClient({ token }: { token: string }) {
         </div>
         {message ? <p className="small">{message}</p> : null}
       </section>
-    </main>
+    </section>
   );
 }

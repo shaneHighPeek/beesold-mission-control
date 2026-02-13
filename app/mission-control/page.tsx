@@ -1,5 +1,6 @@
 "use client";
 
+import { AppShell } from "@/components/ui/AppShell";
 import { useEffect, useMemo, useState } from "react";
 
 type IntakeStatus =
@@ -86,27 +87,31 @@ export default function MissionControlPage() {
   }
 
   return (
-    <main className="grid" style={{ gap: "1rem" }}>
-      <header className="card">
-        <h1>Mission Control Operator Cockpit</h1>
-        <p>Monitor intake lifecycle, deterministic pipeline progress, and approval gates.</p>
-      </header>
-
-      <section className="grid two">
+    <AppShell
+      active="mission"
+      title="Mission Control Operator Cockpit"
+      subtitle="Monitor lifecycle state, inspect reports, and apply final decision gates."
+    >
+      <section className="mission-grid">
         <article className="card">
-          <h2>Intake Pipeline Queue</h2>
-          <div className="grid" style={{ gap: "0.55rem" }}>
+          <div className="panel-head">
+            <h2>Intake Queue</h2>
+            <span className="badge">{items.length} active</span>
+          </div>
+
+          <div className="grid" style={{ gap: "0.65rem" }}>
             {items.map((item) => (
               <button
                 key={item.id}
-                className="secondary"
-                style={{ textAlign: "left" }}
+                className={`queue-item ${selectedSessionId === item.id ? "active" : ""}`}
                 onClick={() => setSelectedSessionId(item.id)}
               >
-                <strong>{item.clientName}</strong>
-                <div className="small">{item.clientEmail}</div>
-                <div className="row">
+                <div className="row" style={{ justifyContent: "space-between" }}>
+                  <strong>{item.clientName}</strong>
                   <span className="badge">{item.status}</span>
+                </div>
+                <div className="small">{item.clientEmail}</div>
+                <div className="row" style={{ marginTop: "0.35rem" }}>
                   {item.jobs.map((job) => (
                     <span className="badge" key={job.id}>
                       {job.kind}: {job.status}
@@ -119,17 +124,21 @@ export default function MissionControlPage() {
         </article>
 
         <article className="card">
-          <h2>Report Viewer</h2>
+          <div className="panel-head">
+            <h2>Report Viewer</h2>
+            {selectedItem ? <span className="badge">{selectedItem.status}</span> : null}
+          </div>
+
           {!selectedItem ? (
             <p className="small">No intake sessions available.</p>
           ) : !reportData?.report ? (
             <p className="small">Report not ready for this intake.</p>
           ) : (
-            <div className="grid" style={{ gap: "0.65rem" }}>
+            <div className="grid" style={{ gap: "0.8rem" }}>
               <h3>{reportData.report.title}</h3>
               <p>{reportData.report.summary}</p>
 
-              <div>
+              <div className="card" style={{ background: "#f6f8ff" }}>
                 <strong>Findings</strong>
                 <ul>
                   {reportData.report.findings.map((item) => (
@@ -138,7 +147,7 @@ export default function MissionControlPage() {
                 </ul>
               </div>
 
-              <div>
+              <div className="card" style={{ background: "#f2fbf7" }}>
                 <strong>Recommendations</strong>
                 <ul>
                   {reportData.report.recommendations.map((item) => (
@@ -176,6 +185,6 @@ export default function MissionControlPage() {
           )}
         </article>
       </section>
-    </main>
+    </AppShell>
   );
 }
