@@ -1,0 +1,136 @@
+:root {
+  --bg: #f4f1ea;
+  --bg-panel: #fffaf2;
+  --ink: #1f2421;
+  --ink-soft: #4d554f;
+  --line: #d7ccb7;
+  --accent: #1f5f4b;
+  --accent-2: #9e6a2f;
+  --ok: #2d7d46;
+  --warn: #a15418;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top right, #efe1cb 0%, transparent 40%),
+    linear-gradient(160deg, var(--bg), #ece6da 60%);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 0.75rem;
+  line-height: 1.2;
+}
+
+p {
+  color: var(--ink-soft);
+}
+
+.card {
+  border: 1px solid var(--line);
+  background: var(--bg-panel);
+  border-radius: 14px;
+  padding: 1rem;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.grid.two {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.field input,
+.field textarea,
+.field select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.6rem 0.7rem;
+  font: inherit;
+  background: #fff;
+}
+
+.progress {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: #e3d8c3;
+  overflow: hidden;
+}
+
+.progress > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #2f8c70);
+}
+
+button {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0.55rem 0.8rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+button.secondary {
+  background: #fff;
+  border-color: var(--line);
+}
+
+button.warn {
+  background: var(--warn);
+  color: #fff;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 0.8rem;
+  background: #fff;
+}
+
+.small {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.error {
+  color: #8e1f1f;
+  font-size: 0.85rem;
+}
