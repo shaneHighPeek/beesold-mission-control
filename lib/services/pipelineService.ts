@@ -10,20 +10,13 @@ import {
   upsertReport,
 } from "@/lib/persistence/mockDb";
 
-// Pipeline is deterministic in Phase 1: intake data is transformed in strict order
-// so every submitted listing follows the same reviewable path.
 export function runKlorSynthesis(sessionId: string): { jobId: string } {
   const session = getSessionById(sessionId);
-  if (session.status !== "SUBMITTED") {
-    throw new Error("Klor synthesis requires SUBMITTED status");
+  if (session.status !== "FINAL_SUBMITTED") {
+    throw new Error("Klor synthesis requires FINAL_SUBMITTED status");
   }
 
-  transitionSession(
-    sessionId,
-    "KLOR_SYNTHESIS",
-    "Klor synthesis job started",
-    "SYSTEM",
-  );
+  transitionSession(sessionId, "KLOR_SYNTHESIS", "Klor synthesis job started", "SYSTEM");
 
   const job = createJob(sessionId, "KLOR_RUN");
   setJobStatus(job.id, "RUNNING");
@@ -37,7 +30,7 @@ export function runKlorSynthesis(sessionId: string): { jobId: string } {
   addJobOutput(job.id, "KLOR_SYNTHESIS_SUMMARY", synthesis);
   setJobStatus(job.id, "COMPLETED");
 
-  addAuditLog(sessionId, "SYSTEM", "KLOR_SYNTHESIS_COMPLETED", synthesis);
+  addAuditLog(sessionId, session.brokerageId, session.clientId, "SYSTEM", "KLOR_SYNTHESIS_COMPLETED", synthesis);
   return { jobId: job.id };
 }
 
@@ -47,21 +40,15 @@ export function runCouncil(sessionId: string): { jobId: string } {
     throw new Error("Council run requires KLOR_SYNTHESIS status");
   }
 
-  transitionSession(
-    sessionId,
-    "COUNCIL_RUNNING",
-    "Council analysis and report generation started",
-    "SYSTEM",
-  );
+  transitionSession(sessionId, "COUNCIL_RUNNING", "Council analysis and report generation started", "SYSTEM");
 
   const job = createJob(sessionId, "COUNCIL_RUN");
   setJobStatus(job.id, "RUNNING");
 
   const report = upsertReport(sessionId, {
     sessionId,
-    title: "Phase 1 Strategic Intake Report",
-    summary:
-      "Council completed structured synthesis. Listing is ready for operator review and explicit approval.",
+    title: "Strategic Intake Report",
+    summary: "Council completed structured synthesis. Listing is ready for operator review.",
     findings: [
       "Intake data quality is sufficient for downstream planning.",
       "Timeline pressure requires staged execution controls.",
@@ -69,8 +56,8 @@ export function runCouncil(sessionId: string): { jobId: string } {
     ],
     recommendations: [
       "Approve with milestone-based execution gates.",
-      "Validate legal and financial attachments before publishing any output.",
-      "Assign owner for Phase 2 Kanban orchestration onboarding.",
+      "Validate legal and financial attachments before publishing output.",
+      "Assign owner for deal execution orchestration.",
     ],
   });
 
@@ -80,14 +67,11 @@ export function runCouncil(sessionId: string): { jobId: string } {
   });
 
   setJobStatus(job.id, "COMPLETED");
-  transitionSession(
-    sessionId,
-    "REPORT_READY",
-    "Report generated and awaiting operator decision",
-    "SYSTEM",
-  );
+  transitionSession(sessionId, "REPORT_READY", "Report generated and awaiting operator decision", "SYSTEM");
 
-  addAuditLog(sessionId, "SYSTEM", "COUNCIL_COMPLETED", { reportId: report.id });
+  addAuditLog(sessionId, session.brokerageId, session.clientId, "SYSTEM", "COUNCIL_COMPLETED", {
+    reportId: report.id,
+  });
   return { jobId: job.id };
 }
 

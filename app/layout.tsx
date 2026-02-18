@@ -14,7 +14,7 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
-  title: "BeeSold Mission Control",
+  title: "Mission Control",
   description: "Phase 1 workflow-driven intelligence pipeline",
 };
 

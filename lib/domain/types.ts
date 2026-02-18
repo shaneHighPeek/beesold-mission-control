@@ -1,7 +1,9 @@
 export type IntakeLifecycleState =
-  | "DRAFT"
+  | "INVITED"
   | "IN_PROGRESS"
-  | "SUBMITTED"
+  | "PARTIAL_SUBMITTED"
+  | "MISSING_ITEMS_REQUESTED"
+  | "FINAL_SUBMITTED"
   | "KLOR_SYNTHESIS"
   | "COUNCIL_RUNNING"
   | "REPORT_READY"
@@ -11,17 +13,64 @@ export type JobStatus = "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED";
 
 export type JobKind = "KLOR_RUN" | "COUNCIL_RUN";
 
+export type IntakeActor = "SYSTEM" | "OPERATOR" | "CLIENT";
+export type BrokeragePortalTone = "corporate" | "premium_advisory";
+
+export interface BrokerageBranding {
+  logoUrl?: string;
+  primaryColor: string;
+  secondaryColor: string;
+  legalFooter: string;
+  showBeeSoldBranding: boolean;
+  portalTone: BrokeragePortalTone;
+}
+
+export interface Brokerage {
+  id: string;
+  slug: string;
+  name: string;
+  shortName?: string;
+  senderName: string;
+  senderEmail: string;
+  portalBaseUrl: string;
+  driveParentFolderId?: string;
+  branding: BrokerageBranding;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClientIdentity {
+  id: string;
+  brokerageId: string;
+  businessName: string;
+  contactName: string;
+  email: string;
+  phone?: string;
+  assignedOwner?: string;
+  passwordSalt?: string;
+  passwordHash?: string;
+  lastActivityAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface IntakeSession {
   id: string;
-  token: string;
-  clientName: string;
-  clientEmail: string;
+  clientId: string;
+  brokerageId: string;
   status: IntakeLifecycleState;
   currentStep: number;
   totalSteps: number;
+  completionPct: number;
+  partialSubmittedAt?: string;
+  finalSubmittedAt?: string;
+  inviteSentAt?: string;
+  lastPortalAccessAt?: string;
+  driveFolderId?: string;
+  driveFolderUrl?: string;
+  missingItems: string[];
   createdAt: string;
   updatedAt: string;
-  submittedAt?: string;
 }
 
 export interface IntakeStep {
@@ -38,10 +87,15 @@ export interface IntakeStep {
 export interface IntakeAsset {
   id: string;
   sessionId: string;
+  brokerageId: string;
+  clientId: string;
   category: "FINANCIALS" | "LEGAL" | "PROPERTY" | "OTHER";
   fileName: string;
   mimeType: string;
   sizeBytes: number;
+  revision: number;
+  driveFileId?: string;
+  driveFileUrl?: string;
   uploadedAt: string;
 }
 
@@ -74,7 +128,9 @@ export interface JobOutput {
 export interface AuditLog {
   id: string;
   sessionId: string;
-  actor: "SYSTEM" | "OPERATOR" | "CLIENT";
+  brokerageId: string;
+  clientId: string;
+  actor: IntakeActor;
   action: string;
   details: Record<string, unknown>;
   createdAt: string;
@@ -92,7 +148,41 @@ export interface Report {
   approvedAt?: string;
 }
 
+export interface MagicLinkToken {
+  id: string;
+  tokenHash: string;
+  sessionId: string;
+  clientId: string;
+  brokerageId: string;
+  expiresAt: string;
+  usedAt?: string;
+  createdAt: string;
+}
+
+export interface PortalAuthSession {
+  id: string;
+  sessionId: string;
+  clientId: string;
+  brokerageId: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface OutboundEmail {
+  id: string;
+  brokerageId: string;
+  sessionId: string;
+  to: string;
+  fromName: string;
+  fromEmail: string;
+  subject: string;
+  html: string;
+  createdAt: string;
+}
+
 export interface MockDatabase {
+  brokerages: Brokerage[];
+  client_identities: ClientIdentity[];
   intake_sessions: IntakeSession[];
   intake_steps: IntakeStep[];
   intake_assets: IntakeAsset[];
@@ -102,4 +192,8 @@ export interface MockDatabase {
   job_outputs: JobOutput[];
   audit_log: AuditLog[];
   reports: Report[];
+  magic_links: MagicLinkToken[];
+  portal_auth_sessions: PortalAuthSession[];
+  outbound_emails: OutboundEmail[];
+  webhook_idempotency: Array<{ id: string; brokerageId: string; clientId: string; createdAt: string }>;
 }

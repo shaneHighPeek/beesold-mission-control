@@ -1,129 +1,76 @@
-# BeeSold Mission Control — Phase 1 Foundation
+# Mission Control
 
-BeeSold Mission Control is a **workflow-driven intelligence pipeline** that transforms messy client input into structured, reviewable strategy.
+Secure multi-tenant onboarding + intake workflow for BeeSold white-label brokerages.
 
-This Phase 1 scaffold implements the backbone:
+## What is implemented
 
-**Client completes intake → pipeline runs → report is generated → operator approves it.**
+- Admin onboarding entrypoint: `POST /api/onboarding/clients`
+- API/webhook onboarding entrypoint (idempotent): `POST /api/webhooks/client-intake`
+- White-label brokerage configuration (seeded with `off-market-group`)
+- Branded invite email generation with brokerage sender identity
+- Magic-link authentication (tokenized, one-time, expiring)
+- Password authentication (set on first access + sign-in later)
+- Tenant-scoped portal session cookie with signature verification
+- Multi-session intake flow with autosave, Save & Exit, resume-at-last-step
+- Partial submit + missing-items request loop + final submit
+- Audit timeline for key actions (invites, magic link use, password set, saves, uploads, submissions, status changes)
+- Google Drive folder creation/upload routing hooks (stubbed + link surfaced in Mission Control)
+- Mission Control dashboard with invite status, completion, last activity, partial/final state, owner, missing items, drive link, and timeline
 
----
+## Core routes
 
-## System Intent
-
-This is not CRUD dashboard software.
-
-Mission Control models every listing as a stateful workflow with explicit transitions:
-
-`DRAFT → IN_PROGRESS → SUBMITTED → KLOR_SYNTHESIS → COUNCIL_RUNNING → REPORT_READY → APPROVED`
-
-The UI is a controlled operator/client interface over that state machine.
-
----
-
-## What Phase 1 Includes
-
-### 1) Secure, Resumable Client Intake
-
-- Token-based intake access (`/intake/[token]`)
-- Progressive multi-step intake flow
-- Completion progress indicator
-- Autosave for step data
-- Resume-later behavior from persisted mock session state
-- Inline validation for required fields
-- Contextual help placeholders per step
-- Structured document upload metadata section
-- Review-before-submit screen
-- Submission lifecycle tracking
-
-### 2) Deterministic Pipeline Engine
-
-State machine and deterministic pipeline flow:
-
-- Submit intake (`POST /intake/submit`)
-- Klor synthesis run (stub, deterministic)
-- Council run (stub, deterministic)
-- Report creation
-- Manual operator approval only (`POST /approval`)
-
-### 3) Mission Control Operator Cockpit
-
-- Intake list with lifecycle status
-- Pipeline job indicators
-- Report viewer
-- Approve/reject controls
-
-### 4) Mock Persistence + SQL Planning
-
-- In-memory persistence abstraction in `lib/persistence/mockDb.ts`
-- Supabase/Postgres schema draft in `docs/schema.sql`
-
----
-
-## API Endpoints (Phase 1)
-
-### Intake
-- `GET /intake/session/[token]`
-- `POST /intake/save-step`
-- `POST /intake/assets`
-- `POST /intake/submit`
-
-### Pipeline
-- `POST /pipeline/klor-run`
-- `POST /pipeline/council-run`
-
-### Reporting & Approval
-- `GET /report?sessionId=...`
-- `POST /approval`
-
-### Operator data
+- `GET /portal/[brokerageSlug]` client sign-in page
+- `GET /portal/auth/magic?token=...` magic-link consume + portal session
+- `GET /portal/[brokerageSlug]/set-password`
+- `GET /portal/[brokerageSlug]/intake`
+- `GET /api/portal/[brokerageSlug]/session`
+- `POST /api/portal/[brokerageSlug]/save-step`
+- `POST /api/portal/[brokerageSlug]/save-exit`
+- `POST /api/portal/[brokerageSlug]/assets`
+- `POST /api/portal/[brokerageSlug]/submit-partial`
+- `POST /api/portal/[brokerageSlug]/submit-final`
 - `GET /api/mission-control/intakes`
+- `GET /api/mission-control/intakes/[sessionId]/timeline`
+- `POST /api/mission-control/intakes/[sessionId]/resend-invite`
+- `POST /api/mission-control/intakes/[sessionId]/magic-link`
+- `POST /api/mission-control/intakes/[sessionId]/missing-items`
 
----
+## Env vars
 
-## Project Structure
+- `MAGIC_LINK_SECRET`
+- `PORTAL_SESSION_SECRET`
+- `MAGIC_LINK_TTL_MINUTES` (default `30`)
+- `PORTAL_SESSION_TTL_HOURS` (default `24`)
+- `DEFAULT_PORTAL_BASE_URL` (default `http://localhost:3000`)
+- `GOOGLE_DRIVE_ENABLED` (`true` to use real adapter when implemented)
+- `OMG_DRIVE_PARENT_FOLDER_ID` (optional seed parent folder)
 
-- `app/` — Next.js routes, API route handlers, pages
-- `components/intake/` — intake UI client component
-- `lib/domain/` — state machine, intake config, domain types
-- `lib/services/` — intake/pipeline/operator domain services
-- `lib/persistence/` — mock DB abstraction
-- `docs/` — architecture docs, lifecycle artifacts, schema, roadmap
+## Add a new brokerage brand
 
----
+1. Add a brokerage record in `lib/persistence/mockDb.ts` (`brokerages` array).
+2. Set `slug`, sender fields, `portalBaseUrl`, Drive parent folder, and `branding` values.
+3. Use that `slug` in onboarding requests (`brokerageSlug`).
 
-## Run Locally
+## Intake schema plug-in
+
+- The form engine consumes `INTAKE_STEP_DEFINITIONS` in `lib/domain/intakeConfig.ts`.
+- Replace this constant with your complete 83-field/7-section spec without changing route/UI contracts.
+
+## Run
 
 ```bash
 npm install
 npm run dev
+npm run typecheck
 ```
 
-Then open:
+## Full-flow test checklist
 
-- `http://localhost:3000/` (landing)
-- `http://localhost:3000/intake/client-demo-001` (demo intake)
-- `http://localhost:3000/mission-control` (operator cockpit)
-
----
-
-## Phase 1 Acceptance Snapshot
-
-Success is achieved when:
-
-1. Client completes intake
-2. Intake submission triggers deterministic pipeline
-3. Report is produced in `REPORT_READY`
-4. Operator explicitly approves report to transition to `APPROVED`
-
-Detailed criteria: `docs/acceptance-criteria-phase1.md`
-
----
-
-## Documentation Index
-
-- `docs/intake-ux-principles.md`
-- `docs/workflow-lifecycle-diagram.md`
-- `docs/client-intake-journey-map.md`
-- `docs/acceptance-criteria-phase1.md`
-- `docs/phase2-roadmap.md`
-- `docs/schema.sql`
+1. Open Mission Control: `http://localhost:3000/mission-control`.
+2. Create client with brokerage slug `off-market-group`.
+3. Copy the magic link from `db.outbound_emails` (mock store) if testing locally without real mailer.
+4. Open magic link, set password, continue to branded intake portal.
+5. Save steps, click Save & Exit, reload and verify resume step/progress.
+6. Upload a document and confirm Drive folder URL appears in Mission Control.
+7. Submit partial, then in Mission Control request missing items, then resume intake.
+8. Submit final and verify pipeline/report status progression + timeline events.

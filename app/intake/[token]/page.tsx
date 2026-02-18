@@ -1,14 +1,11 @@
-import { AppShell } from "@/components/ui/AppShell";
-import { IntakeClient } from "@/components/intake/IntakeClient";
+import Link from "next/link";
 
-export default function IntakePage({ params }: { params: { token: string } }) {
+export default function LegacyIntakePage() {
   return (
-    <AppShell
-      active="intake"
-      title="Client Intake Portal"
-      subtitle="Guided onboarding with autosave, document capture, and deterministic handoff."
-    >
-      <IntakeClient token={params.token} />
-    </AppShell>
+    <main className="legacy-message">
+      <h1>Legacy intake link</h1>
+      <p>This link format has been replaced by brokerage-branded secure portal links.</p>
+      <Link href="/">Return to dashboard</Link>
+    </main>
   );
 }

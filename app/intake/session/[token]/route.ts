@@ -1,13 +1,5 @@
-import { fail, ok } from "@/lib/api/responses";
-import { getIntakeSessionView } from "@/lib/services/intakeService";
+import { fail } from "@/lib/api/responses";
 
-export async function GET(
-  _request: Request,
-  { params }: { params: { token: string } },
-) {
-  try {
-    return ok(getIntakeSessionView(params.token));
-  } catch (error) {
-    return fail((error as Error).message, 404);
-  }
+export async function GET() {
+  return fail("Legacy token sessions are disabled. Use brokerage portal session endpoints.", 410);
 }

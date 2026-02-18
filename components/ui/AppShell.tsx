@@ -13,7 +13,7 @@ type AppShellProps = {
 
 const navItems = [
   { key: "home", label: "Dashboard", href: "/" },
-  { key: "intake", label: "Intake Portal", href: "/intake/client-demo-001" },
+  { key: "intake", label: "Client Portal", href: "/portal/off-market-group" },
   { key: "mission", label: "Mission Control", href: "/mission-control" },
 ] as const;
 
@@ -46,7 +46,7 @@ export function AppShell({ title, subtitle, active, children }: AppShellProps) {
           ))}
         </nav>
 
-        <div className="shell-sidebar-footer">Phase 1 Workflow Live</div>
+        <div className="shell-sidebar-footer">Secure Multi-Tenant Intake Live</div>
       </aside>
 
       <div className="shell-main">

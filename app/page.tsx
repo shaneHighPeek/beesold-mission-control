@@ -1,56 +1,53 @@
 import Link from "next/link";
 import { AppShell } from "@/components/ui/AppShell";
-import { getDemoToken } from "@/lib/persistence/mockDb";
 
 export default function HomePage() {
-  const demoToken = getDemoToken();
-
   return (
     <AppShell
       active="home"
-      title="Hi Shane, what will we run today?"
-      subtitle="Workflow-first operations for secure intake, synthesis, and operator decisions."
+      title="BeeSold Mission Control"
+      subtitle="Brokerage-branded onboarding, secure intake sessions, and operator governance"
     >
       <section className="quick-actions">
-        <Link href={`/intake/${demoToken}`} className="quick-card">
-          <span className="quick-tag">Client Flow</span>
-          <h3>Continue Intake Session</h3>
-          <p>Guide your client through structured onboarding with autosave and validation.</p>
+        <Link href="/mission-control" className="quick-card">
+          <span className="quick-tag">Admin Flow</span>
+          <h3>Create + Invite Clients</h3>
+          <p>Manual onboarding, resend invites, request missing items, and review audit trails.</p>
         </Link>
 
-        <Link href="/mission-control" className="quick-card">
-          <span className="quick-tag">Operator Flow</span>
-          <h3>Open Mission Control</h3>
-          <p>Review lifecycle state, inspect outputs, and approve or reject reports.</p>
+        <Link href="/portal/off-market-group" className="quick-card">
+          <span className="quick-tag">Client Flow</span>
+          <h3>Open OMG Branded Portal</h3>
+          <p>Password and magic-link sign-in with save/resume intake sessions.</p>
         </Link>
       </section>
 
       <section className="highlight-panel">
         <div className="highlight-head">
-          <h2>Phase 1 Intelligence Pipeline</h2>
-          <span className="badge">Deterministic</span>
+          <h2>Workflow Lifecycle</h2>
+          <span className="badge">Tenant Isolated</span>
         </div>
 
         <div className="highlight-grid">
           <article className="highlight-card">
-            <span>1 · Intake</span>
-            <h3>Capture clean business context</h3>
-            <p>Tokenized, resumable, and validated entry from clients.</p>
+            <span>1</span>
+            <h3>Onboard</h3>
+            <p>Create client via admin or webhook with idempotent update semantics.</p>
           </article>
           <article className="highlight-card">
-            <span>2 · Klor</span>
-            <h3>Synthesize listing intelligence</h3>
-            <p>Deterministic transformation with traceable workflow logs.</p>
+            <span>2</span>
+            <h3>Authenticate</h3>
+            <p>Magic links + password sign-in with tenant-scoped portal sessions.</p>
           </article>
           <article className="highlight-card">
-            <span>3 · Council</span>
-            <h3>Generate strategic report</h3>
-            <p>Action-oriented findings and recommendation blocks for review.</p>
+            <span>3</span>
+            <h3>Complete Intake</h3>
+            <p>Autosave, Save & Exit, partial submissions, and revision loops.</p>
           </article>
           <article className="highlight-card">
-            <span>4 · Approval</span>
-            <h3>Human gate before publish</h3>
-            <p>Operator decision controls final state transition to APPROVED.</p>
+            <span>4</span>
+            <h3>Operate</h3>
+            <p>Mission Control tracks progress, missing items, Drive links, and audit events.</p>
           </article>
         </div>
       </section>

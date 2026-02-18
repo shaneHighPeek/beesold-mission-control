@@ -1,5 +1,7 @@
+import { randomUUID } from "crypto";
+
 export function newId(prefix: string): string {
-  return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+  return `${prefix}_${randomUUID().replace(/-/g, "")}`;
 }
 
 export function nowIso(): string {
