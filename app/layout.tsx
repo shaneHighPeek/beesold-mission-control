@@ -16,6 +16,9 @@ const sora = Sora({
 export const metadata: Metadata = {
   title: "Dashboard",
   description: "Phase 1 workflow-driven intelligence pipeline",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
