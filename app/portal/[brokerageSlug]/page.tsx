@@ -1,6 +1,8 @@
 import { PortalLogin } from "@/components/portal/PortalLogin";
 import { getBrokerageTheme } from "@/lib/services/brokerageService";
 
+export const dynamic = "force-dynamic";
+
 export default async function BrokeragePortalLoginPage({ params }: { params: { brokerageSlug: string } }) {
   const brokerage = await getBrokerageTheme(params.brokerageSlug);
 

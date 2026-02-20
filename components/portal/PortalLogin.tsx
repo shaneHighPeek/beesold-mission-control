@@ -56,7 +56,7 @@ export function PortalLogin(props: PortalLoginProps) {
   return (
     <section className="portal-auth-wrap">
       <article className="card portal-auth-card">
-        <h1>{props.brokerageName} Client Portal</h1>
+        <h1>{props.brokerageName} Listings Portal</h1>
         {props.logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={props.logoUrl} alt={`${props.brokerageName} logo`} style={{ maxWidth: 220, height: "auto" }} />

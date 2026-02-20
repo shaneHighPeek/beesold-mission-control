@@ -13,7 +13,7 @@ type AppShellProps = {
 
 const navItems = [
   { key: "dashboard", label: "Dashboard", href: "/mission-control" },
-  { key: "intake", label: "Client Portal", href: "/portal/off-market-group" },
+  { key: "intake", label: "Listings Portal", href: "/portal/off-market-group" },
 ] as const;
 
 export function AppShell({ title, subtitle, active, children }: AppShellProps) {

@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { PORTAL_SESSION_COOKIE, resolvePortalAuthForBrokerage } from "@/lib/services/authService";
 import { getBrokerageTheme } from "@/lib/services/brokerageService";
 
+export const dynamic = "force-dynamic";
+
 export default async function BrokerageIntakePage({ params }: { params: { brokerageSlug: string } }) {
   try {
     await resolvePortalAuthForBrokerage({

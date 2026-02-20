@@ -630,7 +630,7 @@ export default function MissionControlPage() {
     <AppShell
       active="dashboard"
       title="Dashboard"
-      subtitle="Client onboarding, intake progress, revision loops, and audit trail"
+      subtitle="Listing onboarding, intake progress, revision loops, and audit trail"
     >
       <section className="card" style={{ order: 0 }}>
         <div className="row" style={{ justifyContent: "space-between" }}>
@@ -649,7 +649,7 @@ export default function MissionControlPage() {
       </section>
       <section className="card" style={{ order: 1 }}>
         <h2>Operations Menu</h2>
-        <p className="small">Select the admin tool you need. Client operations remain the primary working view below.</p>
+        <p className="small">Select the admin tool you need. Listing operations remain the primary working view below.</p>
         {!canAdmin ? <p className="small">Editor access is view-only for operations.</p> : null}
         <div className="row">
           <button
@@ -674,7 +674,7 @@ export default function MissionControlPage() {
             onClick={() => setActiveOpsPanel("create-client")}
             disabled={!canAdmin}
           >
-            3. Create Client
+            3. Create Listing
           </button>
           <button
             className={activeOpsPanel === "dev-links" ? "primary" : "secondary"}
@@ -690,11 +690,11 @@ export default function MissionControlPage() {
       <section className="mission-grid" style={{ order: 2 }}>
         <article className="card">
           <div className="panel-head">
-            <h2>Clients</h2>
+            <h2>Listings</h2>
             <span className="badge">{filteredItems.length}</span>
           </div>
           <label className="field">
-            <span>Search clients</span>
+            <span>Search listings</span>
             <input
               value={clientSearch}
               onChange={(event) => setClientSearch(event.target.value)}
@@ -738,7 +738,7 @@ export default function MissionControlPage() {
             >
               <option value="active">Active only</option>
               <option value="archived">Archived only</option>
-              <option value="all">All clients</option>
+              <option value="all">All listings</option>
             </select>
           </label>
           <div className="grid" style={{ gap: "0.65rem" }}>
@@ -1124,7 +1124,7 @@ export default function MissionControlPage() {
 
       {canAdmin && activeOpsPanel === "create-client" ? (
       <section className="card" style={{ order: 3 }}>
-        <h2>Create Client</h2>
+        <h2>Create Listing</h2>
         <div className="grid two">
           <label className="field">
             <span>Brokerage</span>
