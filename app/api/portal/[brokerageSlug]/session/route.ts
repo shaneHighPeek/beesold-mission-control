@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 
 export async function GET(_request: Request, { params }: { params: { brokerageSlug: string } }) {
   try {
-    const data = getIntakeSessionView({
+    const data = await getIntakeSessionView({
       brokerageSlug: params.brokerageSlug,
       signedCookieValue: cookies().get(PORTAL_SESSION_COOKIE)?.value,
     });

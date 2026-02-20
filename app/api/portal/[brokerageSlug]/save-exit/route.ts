@@ -7,7 +7,7 @@ export async function POST(request: Request, { params }: { params: { brokerageSl
   try {
     const body = (await request.json()) as { currentStep: number };
     return ok(
-      saveAndExit({
+      await saveAndExit({
         brokerageSlug: params.brokerageSlug,
         signedCookieValue: cookies().get(PORTAL_SESSION_COOKIE)?.value,
         currentStep: body.currentStep,

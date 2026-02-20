@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = consumeMagicLinkAndAuthenticate(token);
+    const result = await consumeMagicLinkAndAuthenticate(token);
     const redirectPath = result.requiresPasswordSetup
       ? `/portal/${result.brokerageSlug}/set-password`
       : `/portal/${result.brokerageSlug}/intake`;

@@ -378,7 +378,7 @@ export const INTAKE_STEP_DEFINITIONS: IntakeStepDefinition[] = [
     estimatedMinutes: 5,
     helpText: "Step 7 of 7",
     fields: [
-      f({ name: "q7_1_upload_photos", label: "Q7.1 Upload Photos (minimum 10)", type: "upload", uploadCategory: "PROPERTY", required: true, helperText: "Accepted formats: JPG, PNG, HEIC" }),
+      f({ name: "q7_1_upload_photos", label: "Q7.1 Upload Photos (minimum 3, up to 10)", type: "upload", uploadCategory: "PROPERTY", required: true, helperText: "Accepted formats: JPG, PNG, HEIC. Minimum 3, maximum 10." }),
       f({ name: "q7_2_upload_video", label: "Q7.2 Upload Video Walkthrough", type: "upload", uploadCategory: "PROPERTY", helperText: "Accepted formats: MP4, MOV" }),
       f({ name: "q7_3_upload_im", label: "Q7.3 Upload Existing IM or Marketing Material", type: "upload", uploadCategory: "OTHER" }),
       f({ name: "q7_4_upload_additional", label: "Q7.4 Upload Additional Documents", type: "upload", uploadCategory: "OTHER" }),

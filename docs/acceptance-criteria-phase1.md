@@ -2,6 +2,14 @@
 
 Status: ✅ Completed (current implementation baseline)
 
+## Phase 2 Handoff Status (2026-02-18)
+
+- [x] Supabase schema and brokerage seed completed.
+- [x] Local environment secrets configured.
+- [x] Driver toggle and Supabase-backed brokerage persistence implemented.
+- [x] Onboarding/auth/intake + mission-control core paths now run in Postgres mode behind driver toggle.
+- [x] Pipeline/report persistence paths migrated and validated in Postgres mode.
+
 ## Intake System
 
 - [x] Client access requires tokenized session URL.

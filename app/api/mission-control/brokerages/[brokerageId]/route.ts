@@ -1,10 +1,13 @@
 import { fail, ok } from "@/lib/api/responses";
+import { requireOperatorAccess } from "@/lib/api/operatorAuth";
 import { updateBrokerageSettings } from "@/lib/services/brokerageService";
 
 export async function PATCH(
   request: Request,
   { params }: { params: { brokerageId: string } },
 ) {
+  const auth = requireOperatorAccess(request, ["ADMIN"]);
+  if (!auth.ok) return auth.response;
   try {
     const body = (await request.json()) as {
       name?: string;
@@ -12,6 +15,8 @@ export async function PATCH(
       senderName?: string;
       senderEmail?: string;
       portalBaseUrl?: string;
+      driveParentFolderId?: string;
+      isArchived?: boolean;
       branding?: {
         logoUrl?: string;
         primaryColor?: string;
@@ -22,7 +27,7 @@ export async function PATCH(
       };
     };
 
-    const brokerage = updateBrokerageSettings({
+    const brokerage = await updateBrokerageSettings({
       brokerageId: params.brokerageId,
       ...body,
     });

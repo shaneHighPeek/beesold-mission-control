@@ -1,8 +1,8 @@
 import { PortalLogin } from "@/components/portal/PortalLogin";
 import { getBrokerageTheme } from "@/lib/services/brokerageService";
 
-export default function BrokeragePortalLoginPage({ params }: { params: { brokerageSlug: string } }) {
-  const brokerage = getBrokerageTheme(params.brokerageSlug);
+export default async function BrokeragePortalLoginPage({ params }: { params: { brokerageSlug: string } }) {
+  const brokerage = await getBrokerageTheme(params.brokerageSlug);
 
   return (
     <main

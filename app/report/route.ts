@@ -10,8 +10,8 @@ export async function GET(request: Request) {
       return fail("sessionId is required", 422);
     }
 
-    const report = getReport(sessionId);
-    const session = listMissionControlIntakes().find((item) => item.id === sessionId);
+    const report = await getReport(sessionId);
+    const session = (await listMissionControlIntakes()).find((item) => item.id === sessionId);
 
     return ok({ report, session });
   } catch (error) {

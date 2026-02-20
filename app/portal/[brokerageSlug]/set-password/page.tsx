@@ -4,9 +4,9 @@ import { redirect } from "next/navigation";
 import { PORTAL_SESSION_COOKIE, resolvePortalAuthForBrokerage } from "@/lib/services/authService";
 import { getBrokerageTheme } from "@/lib/services/brokerageService";
 
-export default function BrokerageSetPasswordPage({ params }: { params: { brokerageSlug: string } }) {
+export default async function BrokerageSetPasswordPage({ params }: { params: { brokerageSlug: string } }) {
   try {
-    resolvePortalAuthForBrokerage({
+    await resolvePortalAuthForBrokerage({
       brokerageSlug: params.brokerageSlug,
       signedCookieValue: cookies().get(PORTAL_SESSION_COOKIE)?.value,
     });
@@ -14,7 +14,7 @@ export default function BrokerageSetPasswordPage({ params }: { params: { brokera
     redirect(`/portal/${params.brokerageSlug}`);
   }
 
-  const brokerage = getBrokerageTheme(params.brokerageSlug);
+  const brokerage = await getBrokerageTheme(params.brokerageSlug);
 
   return (
     <main

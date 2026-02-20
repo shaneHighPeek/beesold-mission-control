@@ -12,7 +12,7 @@ export async function POST(request: Request, { params }: { params: { brokerageSl
       markComplete: boolean;
     };
 
-    const result = saveIntakeStep({
+    const result = await saveIntakeStep({
       brokerageSlug: params.brokerageSlug,
       signedCookieValue: cookies().get(PORTAL_SESSION_COOKIE)?.value,
       stepKey: body.stepKey,

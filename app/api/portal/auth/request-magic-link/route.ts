@@ -1,5 +1,11 @@
 import { fail, ok } from "@/lib/api/responses";
+import { isPostgresDriver } from "@/lib/persistence/driver";
 import { getActiveSessionByClient, getBrokerageBySlug, getClientByBrokerageAndEmail } from "@/lib/persistence/mockDb";
+import {
+  getActiveSessionByClientFromSupabase,
+  getBrokerageBySlugFromSupabase,
+  getClientByBrokerageAndEmailFromSupabase,
+} from "@/lib/persistence/supabaseRest";
 import { sendInviteForSession } from "@/lib/services/onboardingService";
 
 export async function POST(request: Request) {
@@ -9,13 +15,20 @@ export async function POST(request: Request) {
       email: string;
     };
 
-    const brokerage = getBrokerageBySlug(body.brokerageSlug);
-    const client = getClientByBrokerageAndEmail(brokerage.id, body.email.toLowerCase());
+    const brokerage = isPostgresDriver()
+      ? await getBrokerageBySlugFromSupabase(body.brokerageSlug)
+      : getBrokerageBySlug(body.brokerageSlug);
+    if (!brokerage) throw new Error("Brokerage not found");
+    const client = isPostgresDriver()
+      ? await getClientByBrokerageAndEmailFromSupabase(brokerage.id, body.email.toLowerCase())
+      : getClientByBrokerageAndEmail(brokerage.id, body.email.toLowerCase());
 
     if (client) {
-      const session = getActiveSessionByClient(client.id);
+      const session = isPostgresDriver()
+        ? await getActiveSessionByClientFromSupabase(client.id)
+        : getActiveSessionByClient(client.id);
       if (session) {
-        sendInviteForSession(session.id);
+        await sendInviteForSession(session.id);
       }
     }
 

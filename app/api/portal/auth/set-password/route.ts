@@ -9,7 +9,7 @@ export async function POST(request: Request) {
       password: string;
     };
 
-    setPortalPassword({
+    await setPortalPassword({
       brokerageSlug: body.brokerageSlug,
       password: body.password,
       signedCookieValue: cookies().get(PORTAL_SESSION_COOKIE)?.value,

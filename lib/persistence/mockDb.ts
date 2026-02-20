@@ -32,6 +32,7 @@ const initialBrokerage: Brokerage = {
   senderEmail: "clientservices@offmarketgroup.example",
   portalBaseUrl: process.env.DEFAULT_PORTAL_BASE_URL ?? "http://localhost:3000",
   driveParentFolderId: process.env.OMG_DRIVE_PARENT_FOLDER_ID,
+  isArchived: false,
   branding: {
     logoUrl: "/logo.png?v=2",
     primaryColor: "#113968",
@@ -52,6 +53,7 @@ const seededClient: ClientIdentity = {
   email: "owner@acme.example",
   phone: "",
   assignedOwner: "Ops Lead",
+  isArchived: false,
   createdAt: nowIso(),
   updatedAt: nowIso(),
   lastActivityAt: nowIso(),
@@ -137,8 +139,8 @@ export function getBrokerageById(id: string): Brokerage {
   return brokerage;
 }
 
-export function listBrokerages(): Brokerage[] {
-  return db.brokerages;
+export function listBrokerages(includeArchived = false): Brokerage[] {
+  return includeArchived ? db.brokerages : db.brokerages.filter((item) => !item.isArchived);
 }
 
 export function updateBrokerage(input: {
@@ -148,6 +150,8 @@ export function updateBrokerage(input: {
   senderName?: string;
   senderEmail?: string;
   portalBaseUrl?: string;
+  driveParentFolderId?: string;
+  isArchived?: boolean;
   branding?: Partial<Brokerage["branding"]>;
 }): Brokerage {
   const brokerage = getBrokerageById(input.brokerageId);
@@ -156,11 +160,59 @@ export function updateBrokerage(input: {
   if (input.senderName !== undefined) brokerage.senderName = input.senderName;
   if (input.senderEmail !== undefined) brokerage.senderEmail = input.senderEmail;
   if (input.portalBaseUrl !== undefined) brokerage.portalBaseUrl = input.portalBaseUrl;
+  if (input.driveParentFolderId !== undefined) brokerage.driveParentFolderId = input.driveParentFolderId;
+  if (input.isArchived !== undefined) {
+    brokerage.isArchived = input.isArchived;
+    brokerage.archivedAt = input.isArchived ? nowIso() : undefined;
+  }
   if (input.branding) {
     brokerage.branding = { ...brokerage.branding, ...input.branding };
   }
   brokerage.updatedAt = nowIso();
   return brokerage;
+}
+
+export function createBrokerage(input: {
+  slug: string;
+  name: string;
+  shortName?: string;
+  senderName: string;
+  senderEmail: string;
+  portalBaseUrl: string;
+  driveParentFolderId?: string;
+  isArchived?: boolean;
+  branding?: Partial<Brokerage["branding"]>;
+}): Brokerage {
+  const existing = db.brokerages.find((item) => item.slug === input.slug);
+  if (existing) {
+    throw new Error("Brokerage slug already exists");
+  }
+
+  const created: Brokerage = {
+    id: newId("brokerage"),
+    slug: input.slug,
+    name: input.name,
+    shortName: input.shortName,
+    senderName: input.senderName,
+    senderEmail: input.senderEmail,
+    portalBaseUrl: input.portalBaseUrl,
+    driveParentFolderId: input.driveParentFolderId,
+    isArchived: input.isArchived ?? false,
+    archivedAt: input.isArchived ? nowIso() : undefined,
+    branding: {
+      logoUrl: input.branding?.logoUrl,
+      primaryColor: input.branding?.primaryColor ?? "#113968",
+      secondaryColor: input.branding?.secondaryColor ?? "#d4932e",
+      legalFooter: input.branding?.legalFooter ?? "Confidential and intended only for authorized clients.",
+      showBeeSoldBranding: input.branding?.showBeeSoldBranding ?? false,
+      portalTone: input.branding?.portalTone ?? "premium_advisory",
+    },
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  };
+
+  db.brokerages.push(created);
+  return created;
 }
 
 export function getClientById(clientId: string): ClientIdentity {
@@ -191,6 +243,8 @@ export function upsertClientIdentity(input: {
     existing.contactName = input.contactName;
     existing.phone = input.phone;
     existing.assignedOwner = input.assignedOwner ?? existing.assignedOwner;
+    existing.isArchived = false;
+    existing.archivedAt = undefined;
     existing.updatedAt = nowIso();
     return existing;
   }
@@ -203,12 +257,22 @@ export function upsertClientIdentity(input: {
     email: input.email.toLowerCase(),
     phone: input.phone,
     assignedOwner: input.assignedOwner,
+    isArchived: false,
+    archivedAt: undefined,
     createdAt: nowIso(),
     updatedAt: nowIso(),
     lastActivityAt: nowIso(),
   };
 
   db.client_identities.push(client);
+  return client;
+}
+
+export function setClientArchived(clientId: string, isArchived: boolean): ClientIdentity {
+  const client = getClientById(clientId);
+  client.isArchived = isArchived;
+  client.archivedAt = isArchived ? nowIso() : undefined;
+  client.updatedAt = nowIso();
   return client;
 }
 
@@ -498,6 +562,19 @@ export function addOutboundEmail(input: Omit<OutboundEmail, "id" | "createdAt">)
     createdAt: nowIso(),
   };
   db.outbound_emails.push(email);
+  return email;
+}
+
+export function updateOutboundEmailDelivery(
+  emailId: string,
+  input: { providerStatus: string; providerMessageId?: string },
+): OutboundEmail {
+  const email = db.outbound_emails.find((item) => item.id === emailId);
+  if (!email) {
+    throw new Error("Outbound email not found");
+  }
+  email.providerStatus = input.providerStatus;
+  email.providerMessageId = input.providerMessageId;
   return email;
 }
 

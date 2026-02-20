@@ -1,26 +1,36 @@
 # Workflow Lifecycle Diagram
 
 ```text
-┌──────────┐
-│  DRAFT   │
+┌───────────┐
+│  INVITED  │
 └────┬─────┘
-     │ client starts intake
+     │ client enters portal
      v
 ┌───────────────┐
 │  IN_PROGRESS  │
 └────┬──────────┘
-     │ client submits
+     │ client submits partial
      v
-┌────────────┐
-│ SUBMITTED  │
+┌─────────────────────┐
+│ PARTIAL_SUBMITTED   │
 └────┬───────┘
+     │ operator requests more
+     v
+┌─────────────────────────┐
+│ MISSING_ITEMS_REQUESTED │
+└────┬────────────┘
+     │ client updates + final submit
+     v
+┌─────────────────┐
+│ FINAL_SUBMITTED │
+└────┬────────────┘
      │ system: run Klor
      v
 ┌─────────────────┐
 │ KLOR_SYNTHESIS  │
-└────┬────────────┘
-     │ system: run Council
-     v
+└───┬──────┬───┘
+    │ system: run Council
+    v
 ┌─────────────────┐
 │ COUNCIL_RUNNING │
 └────┬────────────┘
@@ -28,13 +38,11 @@
      v
 ┌──────────────┐
 │ REPORT_READY │
-└───┬──────┬───┘
-    │      │
-    │      └───────────────┐
-    │ operator rejects      │ return for rework
-    v                       │
-┌───────────┐               │
-│ APPROVED  │<──────────────┘
+└────┬─────────┘
+     │ operator approves
+     v
+┌───────────┐
+│ APPROVED  │
 └───────────┘
 ```
 

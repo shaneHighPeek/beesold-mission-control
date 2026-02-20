@@ -6,15 +6,15 @@ import { cookies } from "next/headers";
 
 export async function POST(_request: Request, { params }: { params: { brokerageSlug: string } }) {
   try {
-    const session = submitFinal({
+    const session = await submitFinal({
       brokerageSlug: params.brokerageSlug,
       signedCookieValue: cookies().get(PORTAL_SESSION_COOKIE)?.value,
     });
 
-    const pipeline = runFullPipeline(session.id);
+    const pipeline = await runFullPipeline(session.id);
 
     return ok({ session, pipeline });
   } catch (error) {
-    return fail((error as Error).message, 401);
+    return fail((error as Error).message, 422);
   }
 }

@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 export async function POST(request: Request, { params }: { params: { brokerageSlug: string } }) {
   try {
     const body = (await request.json()) as { note?: string };
-    const session = submitPartial({
+    const session = await submitPartial({
       brokerageSlug: params.brokerageSlug,
       signedCookieValue: cookies().get(PORTAL_SESSION_COOKIE)?.value,
       note: body.note,

@@ -34,6 +34,8 @@ export interface Brokerage {
   senderEmail: string;
   portalBaseUrl: string;
   driveParentFolderId?: string;
+  isArchived: boolean;
+  archivedAt?: string;
   branding: BrokerageBranding;
   createdAt: string;
   updatedAt: string;
@@ -49,6 +51,8 @@ export interface ClientIdentity {
   assignedOwner?: string;
   passwordSalt?: string;
   passwordHash?: string;
+  isArchived: boolean;
+  archivedAt?: string;
   lastActivityAt: string;
   createdAt: string;
   updatedAt: string;
@@ -177,6 +181,8 @@ export interface OutboundEmail {
   fromEmail: string;
   subject: string;
   html: string;
+  providerMessageId?: string;
+  providerStatus?: string;
   createdAt: string;
 }
 

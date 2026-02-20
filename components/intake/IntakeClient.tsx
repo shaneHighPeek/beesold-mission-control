@@ -35,6 +35,11 @@ type IntakeField = {
   options?: string[];
   helperText?: string;
   uploadCategory?: "FINANCIALS" | "LEGAL" | "PROPERTY" | "OTHER";
+  validation?: {
+    sumGroup?: string;
+    min?: number;
+    max?: number;
+  };
 };
 
 type IntakeStepDefinition = {
@@ -79,20 +84,12 @@ type IntakeSessionResponse = {
   };
 };
 
-function guessMimeType(fileName: string): string {
-  const lower = fileName.toLowerCase();
-  if (lower.endsWith(".pdf")) return "application/pdf";
-  if (lower.endsWith(".xlsx")) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-  if (lower.endsWith(".xls")) return "application/vnd.ms-excel";
-  if (lower.endsWith(".csv")) return "text/csv";
-  if (lower.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
-  if (lower.endsWith(".png")) return "image/png";
-  if (lower.endsWith(".heic")) return "image/heic";
-  if (lower.endsWith(".mp4")) return "video/mp4";
-  if (lower.endsWith(".mov")) return "video/quicktime";
-  return "application/octet-stream";
-}
+type SectionCelebration = {
+  completedTitle: string;
+  nextTitle: string;
+  nextSubtitle: string;
+  overallProgress: number;
+};
 
 function toCurrencyInput(value: unknown): string {
   if (typeof value === "number") return String(value);
@@ -114,9 +111,52 @@ function cleanLabel(label: string): string {
 function chunkFields(fields: IntakeField[]): IntakeField[][] {
   const groups: IntakeField[][] = [];
   let bucket: IntakeField[] = [];
+  const consumed = new Set<string>();
+
+  function flushBucket() {
+    if (bucket.length > 0) {
+      groups.push(bucket);
+      bucket = [];
+    }
+  }
 
   fields.forEach((field) => {
-    const isLong = field.type === "textarea" || field.type === "upload" || field.type === "multi_select";
+    if (consumed.has(field.name)) {
+      return;
+    }
+
+    if (field.type === "upload") {
+      const groupedUploads = fields.filter((item) => item.type === "upload" && !consumed.has(item.name));
+      if (groupedUploads.length > 0) {
+        flushBucket();
+        groupedUploads.forEach((item) => consumed.add(item.name));
+        groups.push(groupedUploads);
+      }
+      return;
+    }
+
+    if (/^q7_(1[4-9]|20)_/.test(field.name)) {
+      const declarationGroup = fields.filter((item) => /^q7_(1[4-9]|20)_/.test(item.name) && !consumed.has(item.name));
+      if (declarationGroup.length > 0) {
+        flushBucket();
+        declarationGroup.forEach((item) => consumed.add(item.name));
+        groups.push(declarationGroup);
+      }
+      return;
+    }
+
+    const sumGroup = field.validation?.sumGroup;
+    if (sumGroup) {
+      const grouped = fields.filter((item) => item.validation?.sumGroup === sumGroup && !consumed.has(item.name));
+      if (grouped.length > 0) {
+        flushBucket();
+        grouped.forEach((item) => consumed.add(item.name));
+        groups.push(grouped);
+      }
+      return;
+    }
+
+    const isLong = field.type === "textarea" || field.type === "multi_select";
     const limit = isLong ? 2 : 4;
 
     if (bucket.length >= limit) {
@@ -130,14 +170,30 @@ function chunkFields(fields: IntakeField[]): IntakeField[][] {
       return;
     }
 
+    consumed.add(field.name);
     bucket.push(field);
   });
 
-  if (bucket.length) {
-    groups.push(bucket);
-  }
+  flushBucket();
 
   return groups.length ? groups : [[]];
+}
+
+function parseNumberish(value: unknown): number {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const cleaned = value.replace(/[^0-9.-]/g, "");
+    return Number(cleaned);
+  }
+  return Number(value);
+}
+
+function hasProgressValue(value: unknown): boolean {
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (typeof value === "number") return Number.isFinite(value);
+  if (typeof value === "boolean") return value;
+  return value !== null && value !== undefined;
 }
 
 function microCopy(index: number, tone: "corporate" | "premium_advisory"): string {
@@ -281,8 +337,13 @@ export function IntakeClient({ brokerageSlug }: { brokerageSlug: string }) {
   const [activeChunk, setActiveChunk] = useState(0);
   const [formState, setFormState] = useState<Record<string, unknown>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [uploadDrafts, setUploadDrafts] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
+  const [celebration, setCelebration] = useState<SectionCelebration | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isSubmittingFinal, setIsSubmittingFinal] = useState(false);
+  const [finalSubmitted, setFinalSubmitted] = useState(false);
+  const [pendingUploads, setPendingUploads] = useState<Record<string, File[]>>({});
+  const [uploadingFields, setUploadingFields] = useState<Record<string, boolean>>({});
 
   const refresh = useCallback(async () => {
     const response = await fetch(`/api/portal/${brokerageSlug}/session`, { cache: "no-store" });
@@ -316,11 +377,17 @@ export function IntakeClient({ brokerageSlug }: { brokerageSlug: string }) {
       if (field.type === "date" && !nextState[field.name]) {
         nextState[field.name] = new Date().toISOString().slice(0, 10);
       }
+
+      // Percentage sum groups should feel instantly usable; default blanks to 0.
+      if (field.validation?.sumGroup && (nextState[field.name] === undefined || nextState[field.name] === "")) {
+        nextState[field.name] = "0";
+      }
     });
 
     setFormState(nextState);
     setErrors({});
     setActiveChunk(0);
+    setPendingUploads({});
   }, [data, currentStep]);
 
   const visibleFields = useMemo(() => {
@@ -329,6 +396,27 @@ export function IntakeClient({ brokerageSlug }: { brokerageSlug: string }) {
   }, [currentStep, formState]);
 
   const chunks = useMemo(() => chunkFields(visibleFields), [visibleFields]);
+  const activeChunkFields = useMemo(() => chunks[activeChunk] ?? [], [chunks, activeChunk]);
+  const activeSumGroup = useMemo(
+    () => activeChunkFields.map((field) => field.validation?.sumGroup).find((item): item is string => Boolean(item)),
+    [activeChunkFields],
+  );
+  const activeSumGroupFields = useMemo(() => {
+    if (!activeSumGroup) return [];
+    return visibleFields.filter((field) => field.validation?.sumGroup === activeSumGroup);
+  }, [activeSumGroup, visibleFields]);
+  const activeSumGroupTotal = useMemo(() => {
+    if (!activeSumGroup) return 0;
+    return activeSumGroupFields.reduce((sum, field) => {
+      const n = parseNumberish(formState[field.name]);
+      return Number.isFinite(n) ? sum + n : sum;
+    }, 0);
+  }, [activeSumGroup, activeSumGroupFields, formState]);
+  const activeSumGroupRemaining = Math.round((100 - activeSumGroupTotal) * 100) / 100;
+  const activeSumGroupAllEntered = useMemo(() => {
+    if (!activeSumGroup) return false;
+    return activeSumGroupFields.every((field) => String(formState[field.name] ?? "").trim().length > 0);
+  }, [activeSumGroup, activeSumGroupFields, formState]);
 
   useEffect(() => {
     if (activeChunk > chunks.length - 1) {
@@ -355,6 +443,18 @@ export function IntakeClient({ brokerageSlug }: { brokerageSlug: string }) {
     return () => clearTimeout(timer);
   }, [brokerageSlug, currentStep, data, formState, activeStep]);
 
+  useEffect(() => {
+    if (!celebration) return;
+    const timer = setTimeout(() => setCelebration(null), 2200);
+    return () => clearTimeout(timer);
+  }, [celebration]);
+
+  const sectionProgress = useMemo(() => {
+    if (visibleFields.length === 0) return 0;
+    const complete = visibleFields.filter((field) => hasProgressValue(formState[field.name])).length;
+    return Math.round((complete / visibleFields.length) * 100);
+  }, [visibleFields, formState]);
+
   if (!data || !currentStep) {
     return (
       <div className="card">
@@ -364,19 +464,31 @@ export function IntakeClient({ brokerageSlug }: { brokerageSlug: string }) {
   }
 
   const session = data.session;
+  const isPostSubmitState = ["FINAL_SUBMITTED", "KLOR_SYNTHESIS", "COUNCIL_RUNNING", "REPORT_READY", "APPROVED"].includes(
+    session.status,
+  );
   const step = currentStep;
   const tone = data.brokerage?.branding?.portalTone ?? "premium_advisory";
-  const chunk = chunks[activeChunk] ?? [];
+  const chunk = activeChunkFields;
   const isLastChunk = activeChunk === chunks.length - 1;
   const onFinalStep = activeStep === session.totalSteps;
   const nudge = getSegmentNudge(step.key, activeChunk, chunks.length, onFinalStep, tone);
-  const momentumProgress =
-    session.status === "FINAL_SUBMITTED" || session.status === "APPROVED"
-      ? 100
-      : Math.min(97, Math.max(70, Math.round(70 + session.completionPct * 0.27 + activeChunk * 3)));
+  const overallProgress = Math.round((((activeStep - 1) + sectionProgress / 100) / Math.max(session.totalSteps, 1)) * 100);
 
   function setField(name: string, value: unknown) {
     setFormState((prev) => ({ ...prev, [name]: value }));
+  }
+
+  function getUploadAccept(field: IntakeField): string {
+    if (field.name === "q7_1_upload_photos") return ".jpg,.jpeg,.png,.heic";
+    if (field.name === "q7_2_upload_video") return ".mp4,.mov";
+    if (field.name === "q7_3_upload_im") return ".pdf,.docx";
+    return ".pdf,.jpg,.jpeg,.png,.heic,.mp4,.mov,.xls,.xlsx,.csv,.docx";
+  }
+
+  function getUploadLimits(field: IntakeField): { min?: number; max?: number } {
+    if (field.name === "q7_1_upload_photos") return { min: 3, max: 10 };
+    return {};
   }
 
   function validateChunk(fields: IntakeField[]): boolean {
@@ -414,49 +526,77 @@ export function IntakeClient({ brokerageSlug }: { brokerageSlug: string }) {
           nextErrors[field.name] = "Brief description must be 150 words or fewer";
         }
       }
-    });
 
-    if (step.key === "revenue_operations") {
-      const pctFields = [
-        "q3_1_bar_pct",
-        "q3_1_food_pct",
-        "q3_1_accommodation_pct",
-        "q3_1_retail_pct",
-        "q3_1_gaming_pct",
-        "q3_1_functions_pct",
-        "q3_1_other_pct",
-      ];
-      const hasAnyPctInChunk = fields.some((field) => pctFields.includes(field.name));
-      if (hasAnyPctInChunk) {
-        const ready = pctFields.every((name) => String(formState[name] ?? "").trim().length > 0);
-        if (ready) {
-          const total = pctFields.reduce((sum, name) => sum + Number(formState[name] ?? 0), 0);
-          if (Math.round(total) !== 100) {
-            nextErrors.q3_1_bar_pct = "Revenue percentages must total 100%";
-          }
+      if (field.type === "upload") {
+        const linked = Array.isArray(value) ? (value as string[]) : [];
+        const limits = getUploadLimits(field);
+        if (limits.min !== undefined && linked.length < limits.min) {
+          nextErrors[field.name] = `Add at least ${limits.min} file(s)`;
+        }
+        if (limits.max !== undefined && linked.length > limits.max) {
+          nextErrors[field.name] = `Maximum ${limits.max} files allowed`;
         }
       }
-    }
+    });
+
+    const chunkSumGroups = Array.from(
+      new Set(fields.map((field) => field.validation?.sumGroup).filter((item): item is string => Boolean(item))),
+    );
+    chunkSumGroups.forEach((group) => {
+      const groupFields = visibleFields.filter((field) => field.validation?.sumGroup === group);
+      const ready = groupFields.every((field) => String(formState[field.name] ?? "").trim().length > 0);
+      if (!ready) return;
+      const total = groupFields.reduce((sum, field) => {
+        const n = parseNumberish(formState[field.name]);
+        return Number.isFinite(n) ? sum + n : sum;
+      }, 0);
+      if (Math.round(total) !== 100) {
+        nextErrors[`${group}__sum`] = "All revenue percentages must add up to 100%.";
+      }
+    });
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   }
 
   async function saveAndAdvanceSection() {
-    await fetch(`/api/portal/${brokerageSlug}/save-step`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        stepKey: step.key,
-        data: formState,
-        currentStep: Math.min(activeStep + 1, session.totalSteps),
-        markComplete: true,
-      }),
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+
+    const nextStepNumber = Math.min(activeStep + 1, session.totalSteps);
+    const nextStepDef = data?.definitions[nextStepNumber - 1];
+    const projectedOverall = Math.round((nextStepNumber / Math.max(session.totalSteps, 1)) * 100);
+
+    // Optimistic UX: celebrate and move immediately while save completes in the background.
+    setCelebration({
+      completedTitle: step.title,
+      nextTitle: nextStepDef?.title ?? "Next section",
+      nextSubtitle: nextStepDef?.subtitle ?? "Continue with the next guided segment.",
+      overallProgress: projectedOverall,
     });
 
+    setActiveStep(nextStepNumber);
+    setActiveChunk(0);
+    setErrors({});
     setMessage("Excellent. Your next segment is ready.");
-    await refresh();
-    setActiveStep((value) => Math.min(value + 1, session.totalSteps));
+
+    try {
+      await fetch(`/api/portal/${brokerageSlug}/save-step`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stepKey: step.key,
+          data: formState,
+          currentStep: nextStepNumber,
+          markComplete: true,
+        }),
+      });
+      await refresh();
+    } catch {
+      setMessage("We could not save that step. Please retry.");
+    } finally {
+      setIsTransitioning(false);
+    }
   }
 
   async function continueChunk() {
@@ -485,26 +625,65 @@ export function IntakeClient({ brokerageSlug }: { brokerageSlug: string }) {
     );
   }
 
-  async function addAsset(field: IntakeField) {
-    const fileName = (uploadDrafts[field.name] ?? "").trim();
-    if (!fileName) return;
-
-    await fetch(`/api/portal/${brokerageSlug}/assets`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        category: field.uploadCategory ?? "OTHER",
-        fileName,
-        mimeType: guessMimeType(fileName),
-        sizeBytes: 100000,
-      }),
-    });
-
+  async function addAssets(field: IntakeField) {
+    const files = pendingUploads[field.name] ?? [];
+    if (files.length === 0) return;
     const existing = Array.isArray(formState[field.name]) ? (formState[field.name] as string[]) : [];
-    setField(field.name, [...existing, fileName]);
-    setUploadDrafts((prev) => ({ ...prev, [field.name]: "" }));
-    setMessage("File added.");
-    await refresh();
+    const limits = getUploadLimits(field);
+    const max = limits.max ?? Number.POSITIVE_INFINITY;
+    const remaining = Math.max(0, max - existing.length);
+    const selected = files.slice(0, remaining);
+    const skipped = files.length - selected.length;
+
+    setUploadingFields((prev) => ({ ...prev, [field.name]: true }));
+    setMessage(`Uploading ${selected.length} file(s)...`);
+
+    try {
+      const results = await Promise.allSettled(
+        selected.map(async (file) => {
+          const form = new FormData();
+          form.set("category", field.uploadCategory ?? "OTHER");
+          form.set("file", file);
+
+          const response = await fetch(`/api/portal/${brokerageSlug}/assets`, {
+            method: "POST",
+            body: form,
+          });
+          const payload = (await response.json()) as { ok?: boolean; error?: string };
+          if (!response.ok || payload.ok === false) {
+            throw new Error(payload.error ?? `Could not upload ${file.name}.`);
+          }
+          return file.name;
+        }),
+      );
+
+      const added: string[] = [];
+      let failed = 0;
+      results.forEach((result) => {
+        if (result.status === "fulfilled") {
+          added.push(result.value);
+          return;
+        }
+        failed += 1;
+      });
+
+      setField(field.name, [...existing, ...added]);
+      setPendingUploads((prev) => ({ ...prev, [field.name]: [] }));
+      await refresh();
+      const messages: string[] = [];
+      messages.push(`Added ${added.length} file(s).`);
+      if (failed > 0) {
+        messages.push(`${failed} failed. Please retry those files.`);
+      }
+      if (skipped > 0) {
+        messages.push(`${skipped} skipped due to upload limit.`);
+      }
+      setMessage(messages.join(" "));
+    } catch {
+      setMessage("Upload failed. Please retry.");
+    } finally {
+      setUploadingFields((prev) => ({ ...prev, [field.name]: false }));
+    }
   }
 
   async function partialSubmit() {
@@ -522,14 +701,34 @@ export function IntakeClient({ brokerageSlug }: { brokerageSlug: string }) {
   }
 
   async function finalSubmit() {
+    if (isSubmittingFinal) return;
     if (!validateChunk(chunk)) return;
 
-    await fetch(`/api/portal/${brokerageSlug}/submit-final`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    });
-    setMessage(tone === "corporate" ? "Submission complete and received." : "Complete. Your submission has been received.");
-    await refresh();
+    setIsSubmittingFinal(true);
+    try {
+      const response = await fetch(`/api/portal/${brokerageSlug}/submit-final`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const payload = (await response.json()) as { ok?: boolean; error?: string };
+      if (!response.ok || payload.ok === false) {
+        setMessage(payload.error ?? "Final submission is not ready yet. Please check required fields and uploads.");
+        return;
+      }
+      setFinalSubmitted(true);
+      setMessage(tone === "corporate" ? "Submission complete and received." : "Complete. Your submission has been received.");
+      await refresh();
+    } finally {
+      setIsSubmittingFinal(false);
+    }
+  }
+
+  function removeLinkedUpload(field: IntakeField, fileName: string) {
+    const linked = Array.isArray(formState[field.name]) ? (formState[field.name] as string[]) : [];
+    setField(
+      field.name,
+      linked.filter((item) => item !== fileName),
+    );
   }
 
   function renderField(field: IntakeField) {
@@ -607,22 +806,58 @@ export function IntakeClient({ brokerageSlug }: { brokerageSlug: string }) {
 
     if (field.type === "upload") {
       const linked = Array.isArray(formState[field.name]) ? (formState[field.name] as string[]) : [];
+      const queued = pendingUploads[field.name] ?? [];
+      const isUploading = uploadingFields[field.name] === true;
+      const limits = getUploadLimits(field);
       return (
         <div className="field" key={field.name}>
           <span>{label}{isFieldRequired(field, formState) ? " *" : ""}</span>
-          <div className="row">
-            <input
-              value={uploadDrafts[field.name] ?? ""}
-              placeholder="Add a file name (e.g. lease.pdf)"
-              onChange={(event) =>
-                setUploadDrafts((prev) => ({ ...prev, [field.name]: event.target.value }))
-              }
-            />
-            <button className="secondary" type="button" onClick={() => addAsset(field)}>
-              Add
-            </button>
-          </div>
-          {linked.length > 0 ? <span className="small">{linked.length} file(s) linked</span> : null}
+          <input
+            type="file"
+            multiple
+            accept={getUploadAccept(field)}
+            onChange={(event) => {
+              const picked = Array.from(event.target.files ?? []);
+              setPendingUploads((prev) => ({ ...prev, [field.name]: picked }));
+            }}
+          />
+          {queued.length > 0 ? (
+            <div className="row">
+              <span className="small">{queued.length} file(s) selected</span>
+              <button
+                className="primary"
+                type="button"
+                onClick={() => addAssets(field)}
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <>
+                    <span className="spinner" /> Uploading...
+                  </>
+                ) : "Upload"}
+              </button>
+            </div>
+          ) : null}
+          {field.name === "q7_1_upload_photos" ? (
+            <span className="small">Minimum 3 photos required. Maximum 10 photos.</span>
+          ) : null}
+          <span className="small">
+            {linked.length} file(s) linked
+            {limits.min !== undefined ? ` · min ${limits.min}` : ""}
+            {limits.max !== undefined ? ` · max ${limits.max}` : ""}
+          </span>
+          {linked.length > 0 ? (
+            <div className="grid" style={{ gap: "0.35rem" }}>
+              {linked.map((name) => (
+                <div key={name} className="row" style={{ justifyContent: "space-between" }}>
+                  <span className="small">{name}</span>
+                  <button className="secondary" type="button" onClick={() => removeLinkedUpload(field, name)}>
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
           {errors[field.name] ? <span className="error">{errors[field.name]}</span> : null}
         </div>
       );
@@ -674,6 +909,40 @@ export function IntakeClient({ brokerageSlug }: { brokerageSlug: string }) {
 
   return (
     <section className="grid" style={{ gap: "1rem" }}>
+      {finalSubmitted || isPostSubmitState ? (
+        <section className="card section-celebration" aria-live="polite">
+          <p className="celebration-kicker">Form Complete</p>
+          <h3>Your intake form is complete and submitted.</h3>
+          <p className="small">
+            Your advisor has everything needed to begin the next internal review steps. It is safe to close this page now.
+          </p>
+          <div className="row" style={{ marginTop: "0.6rem" }}>
+            <span className="badge">{session.status}</span>
+            <button className="secondary" type="button" onClick={() => window.location.reload()}>
+              Refresh Status
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {!(finalSubmitted || isPostSubmitState) ? (
+        <>
+      {celebration ? (
+        <section className="card section-celebration" aria-live="polite">
+          <p className="celebration-kicker">Section Complete</p>
+          <h3>{celebration.completedTitle} finished</h3>
+          <p className="small">Great work. You&apos;re moving well through onboarding.</p>
+          <div className="progress" aria-label="overall completion after section">
+            <span style={{ width: `${celebration.overallProgress}%` }} />
+          </div>
+          <p className="small">Overall completion: {celebration.overallProgress}%</p>
+          <div className="next-intro">
+            <strong>Next: {celebration.nextTitle}</strong>
+            <p className="small">{celebration.nextSubtitle}</p>
+          </div>
+        </section>
+      ) : null}
+
       <header className="card">
         <div className="row" style={{ justifyContent: "space-between" }}>
           <h2>{currentStep.title}</h2>
@@ -682,10 +951,10 @@ export function IntakeClient({ brokerageSlug }: { brokerageSlug: string }) {
         <p>{step.subtitle}</p>
         <p className="small">{microCopy(activeChunk, tone)} Estimated focus time: {step.estimatedMinutes} minutes.</p>
         <p className="small">{nudge.body}</p>
-        <div className="progress" aria-label="intake momentum progress">
-          <span style={{ width: `${momentumProgress}%` }} />
+        <div className="progress" aria-label="current section progress">
+          <span style={{ width: `${sectionProgress}%` }} />
         </div>
-        <p className="small">Momentum: {momentumProgress}%</p>
+        <p className="small">Section progress: {sectionProgress}% · Overall progress: {overallProgress}%</p>
         {session.missingItems.length > 0 ? (
           <div className="card" style={{ background: "#fff7ea", marginTop: "0.75rem" }}>
             <strong>Items requested by your advisor</strong>
@@ -703,8 +972,30 @@ export function IntakeClient({ brokerageSlug }: { brokerageSlug: string }) {
           <strong>{nudge.title}</strong>
           <span className="small">{activeChunk + 1} / {chunks.length}</span>
         </div>
+        <p className="small">Tip: complete what you can now, then use Save & Exit anytime.</p>
 
         <div className="grid" style={{ gap: "0.75rem", marginTop: "0.75rem" }}>
+          {activeSumGroup ? (
+            <div className="card" style={{ background: "#f8f9ff" }}>
+              <strong>Revenue Mix Check</strong>
+              <p className="small">All revenue percentage fields in this section must total exactly 100%.</p>
+              <p className="small">
+                Total entered: {Math.round(activeSumGroupTotal * 100) / 100}% · Remaining: {activeSumGroupRemaining}%
+              </p>
+              {activeSumGroupAllEntered && Math.round(activeSumGroupTotal) === 100 ? (
+                <p className="small">Perfect. Your revenue mix totals 100%.</p>
+              ) : null}
+              {errors[`${activeSumGroup}__sum`] ? <span className="error">{errors[`${activeSumGroup}__sum`]}</span> : null}
+            </div>
+          ) : null}
+          {chunk.some((field) => field.type === "upload") ? (
+            <div className="card" style={{ background: "#f8f9ff" }}>
+              <strong>Upload Files From Your Computer</strong>
+              <p className="small">
+                Choose files directly from your device. Each upload is saved securely and routed to your deal folder.
+              </p>
+            </div>
+          ) : null}
           {chunk.map((field) => renderField(field))}
         </div>
 
@@ -712,33 +1003,43 @@ export function IntakeClient({ brokerageSlug }: { brokerageSlug: string }) {
           <button
             className="secondary"
             onClick={() => {
+              if (isTransitioning) return;
               if (activeChunk > 0) {
                 setActiveChunk((value) => value - 1);
                 return;
               }
               setActiveStep((value) => Math.max(1, value - 1));
             }}
-            disabled={activeStep === 1 && activeChunk === 0}
+            disabled={isTransitioning || (activeStep === 1 && activeChunk === 0)}
           >
             Back
           </button>
 
           {!onFinalStep && (
-            <button className="primary" onClick={continueChunk}>
+            <button className="primary" onClick={continueChunk} disabled={isTransitioning}>
               {isLastChunk ? "Finish This Part" : nudge.cta}
             </button>
           )}
 
           {onFinalStep && (
             <>
-              <button className="secondary" onClick={partialSubmit}>Submit What I Have</button>
-              <button className="primary" onClick={finalSubmit}>Finish and Submit</button>
+              <button className="secondary" onClick={partialSubmit} disabled={isSubmittingFinal}>
+                Submit What I Have
+              </button>
+              <button className="primary" onClick={finalSubmit} disabled={isSubmittingFinal}>
+                {isSubmittingFinal ? (
+                  <>
+                    <span className="spinner" /> Submitting...
+                  </>
+                ) : "Finish and Submit"}
+              </button>
             </>
           )}
 
-          <button className="secondary" onClick={saveExit}>Save & Exit</button>
+          <button className="secondary" onClick={saveExit} disabled={isTransitioning || isSubmittingFinal}>Save & Exit</button>
         </div>
 
+        {isTransitioning ? <p className="small">Saving section...</p> : null}
         {message ? <p className="small">{message}</p> : null}
       </section>
 
@@ -756,6 +1057,8 @@ export function IntakeClient({ brokerageSlug }: { brokerageSlug: string }) {
           </ul>
         )}
       </section>
+        </>
+      ) : null}
     </section>
   );
 }

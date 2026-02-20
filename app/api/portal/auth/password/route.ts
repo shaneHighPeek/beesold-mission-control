@@ -10,7 +10,7 @@ export async function POST(request: Request) {
       password: string;
     };
 
-    const auth = authenticateWithPassword(body);
+    const auth = await authenticateWithPassword(body);
     const response = NextResponse.json({ ok: true, data: { redirectTo: `/portal/${auth.brokerageSlug}/intake` } });
 
     response.cookies.set(PORTAL_SESSION_COOKIE, auth.cookieValue, {

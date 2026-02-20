@@ -347,6 +347,36 @@ button:disabled {
   color: #49598f;
 }
 
+.status-invited {
+  border-color: #b7c0df;
+  background: #eef1fa;
+  color: #46517d;
+}
+
+.status-inprogress {
+  border-color: #d7c38e;
+  background: #fff6df;
+  color: #7a5b1f;
+}
+
+.status-processing {
+  border-color: #9ab8e7;
+  background: #e9f2ff;
+  color: #29548d;
+}
+
+.status-review {
+  border-color: #a89ee8;
+  background: #f1ecff;
+  color: #4d3f9d;
+}
+
+.status-approved {
+  border-color: #8cc5aa;
+  background: #e8f9ef;
+  color: #216846;
+}
+
 .small {
   font-size: 0.84rem;
   color: var(--ink-soft);
@@ -355,6 +385,58 @@ button:disabled {
 .error {
   color: #9f2f2f;
   font-size: 0.85rem;
+}
+
+.section-celebration {
+  border: 1px solid #8ec7ff;
+  background: linear-gradient(135deg, #eef5ff, #f3fffc);
+  animation: celebrationPop 380ms ease-out;
+}
+
+.celebration-kicker {
+  display: inline-block;
+  margin: 0 0 0.35rem;
+  padding: 0.22rem 0.62rem;
+  border-radius: 999px;
+  background: #e5f0ff;
+  color: #2f4a91;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.next-intro {
+  margin-top: 0.65rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed #b9ccfb;
+}
+
+.spinner {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  display: inline-block;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes celebrationPop {
+  0% {
+    transform: translateY(8px) scale(0.99);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .portal-theme {
@@ -367,18 +449,92 @@ button:disabled {
     linear-gradient(165deg, #f6f8fc, #eef2fa);
 }
 
+.portal-intake-wrap {
+  width: min(920px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 0.9rem;
+}
+
 .portal-header {
   border: 1px solid color-mix(in srgb, var(--portal-primary) 18%, #cfd8ea);
   border-radius: 16px;
-  padding: 1rem 1.1rem;
+  padding: 1rem 1.05rem;
   background: rgba(255, 255, 255, 0.86);
-  margin-bottom: 1rem;
 }
 
 .portal-footer-note {
   margin-top: 0.75rem;
   font-size: 0.82rem;
   color: #4d5b7f;
+}
+
+.portal-theme .card {
+  border-color: color-mix(in srgb, var(--portal-primary) 14%, #d6def0);
+  border-radius: 14px;
+  padding: 0.9rem;
+  box-shadow: 0 12px 30px -26px color-mix(in srgb, var(--portal-primary) 35%, #1b2d63);
+}
+
+.portal-theme .field input,
+.portal-theme .field textarea,
+.portal-theme .field select {
+  border-color: color-mix(in srgb, var(--portal-primary) 18%, #d6def7);
+  background: #ffffff;
+  padding: 0.62rem 0.72rem;
+}
+
+.portal-theme .field input:focus,
+.portal-theme .field textarea:focus,
+.portal-theme .field select:focus {
+  outline: 2px solid color-mix(in srgb, var(--portal-secondary) 34%, #ffffff);
+  outline-offset: 1px;
+  border-color: color-mix(in srgb, var(--portal-primary) 42%, #d6def7);
+}
+
+.portal-theme .progress {
+  background: color-mix(in srgb, var(--portal-primary) 16%, #e7ecfa);
+}
+
+.portal-theme .progress > span {
+  background: linear-gradient(90deg, var(--portal-primary), var(--portal-secondary));
+}
+
+.portal-theme button.primary {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--portal-primary) 92%, #ffffff),
+    color-mix(in srgb, var(--portal-primary) 68%, var(--portal-secondary) 32%)
+  );
+}
+
+.portal-theme button.secondary {
+  border-color: color-mix(in srgb, var(--portal-primary) 20%, #d3dcf9);
+  color: color-mix(in srgb, var(--portal-primary) 72%, #2d3c6d);
+}
+
+.portal-theme .badge {
+  border-color: color-mix(in srgb, var(--portal-primary) 26%, #ced8fb);
+  background: color-mix(in srgb, var(--portal-primary) 12%, #f2f5ff);
+  color: color-mix(in srgb, var(--portal-primary) 78%, #49598f);
+}
+
+.portal-theme .small {
+  color: color-mix(in srgb, var(--portal-primary) 35%, #5f6784);
+}
+
+.portal-theme .section-celebration {
+  border: 1px solid color-mix(in srgb, var(--portal-secondary) 44%, #8ec7ff);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--portal-primary) 12%, #eef5ff),
+    color-mix(in srgb, var(--portal-secondary) 14%, #f3fffc)
+  );
+}
+
+.portal-theme .celebration-kicker {
+  background: color-mix(in srgb, var(--portal-primary) 14%, #e5f0ff);
+  color: color-mix(in srgb, var(--portal-primary) 78%, #2f4a91);
 }
 
 .portal-auth-wrap {
@@ -414,5 +570,11 @@ button:disabled {
   .mission-grid,
   .highlight-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1280px) {
+  .portal-intake-wrap {
+    width: min(880px, 100%);
   }
 }

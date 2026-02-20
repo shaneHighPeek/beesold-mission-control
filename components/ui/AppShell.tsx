@@ -7,14 +7,13 @@ import type { ReactNode } from "react";
 type AppShellProps = {
   title: string;
   subtitle?: string;
-  active: "home" | "intake" | "mission";
+  active: "dashboard" | "intake";
   children: ReactNode;
 };
 
 const navItems = [
-  { key: "home", label: "Dashboard", href: "/" },
+  { key: "dashboard", label: "Dashboard", href: "/mission-control" },
   { key: "intake", label: "Client Portal", href: "/portal/off-market-group" },
-  { key: "mission", label: "Mission Control", href: "/mission-control" },
 ] as const;
 
 export function AppShell({ title, subtitle, active, children }: AppShellProps) {
@@ -31,7 +30,7 @@ export function AppShell({ title, subtitle, active, children }: AppShellProps) {
             sizes="(max-width: 1024px) 70vw, 220px"
             priority
           />
-          <p className="brand-subheadline">Mission Control</p>
+          <p className="brand-subheadline">Dashboard</p>
         </div>
 
         <nav className="shell-nav">
