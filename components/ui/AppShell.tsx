@@ -9,6 +9,7 @@ type AppShellProps = {
   subtitle?: string;
   active: "dashboard" | "intake";
   children: ReactNode;
+  sidebarMeta?: ReactNode;
 };
 
 const navItems = [
@@ -16,7 +17,7 @@ const navItems = [
   { key: "intake", label: "Listings Portal", href: "/portal/off-market-group" },
 ] as const;
 
-export function AppShell({ title, subtitle, active, children }: AppShellProps) {
+export function AppShell({ title, subtitle, active, children, sidebarMeta }: AppShellProps) {
   return (
     <div className="shell">
       <aside className="shell-sidebar">
@@ -45,6 +46,7 @@ export function AppShell({ title, subtitle, active, children }: AppShellProps) {
           ))}
         </nav>
 
+        {sidebarMeta ? <div className="shell-sidebar-meta">{sidebarMeta}</div> : null}
         <div className="shell-sidebar-footer">Secure Multi-Tenant Intake Live</div>
       </aside>
 

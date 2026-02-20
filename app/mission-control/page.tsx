@@ -354,6 +354,15 @@ export default function MissionControlPage() {
     );
     return showFullTimeline ? ordered : ordered.slice(0, 10);
   }, [timeline, showFullTimeline]);
+  const statusSummary = useMemo(() => {
+    const total = filteredItems.length;
+    const active = filteredItems.filter((item) =>
+      ["INVITED", "IN_PROGRESS", "PARTIAL_SUBMITTED", "MISSING_ITEMS_REQUESTED"].includes(item.status),
+    ).length;
+    const reviewReady = filteredItems.filter((item) => item.status === "REPORT_READY").length;
+    const approved = filteredItems.filter((item) => item.status === "APPROVED").length;
+    return { total, active, reviewReady, approved };
+  }, [filteredItems]);
 
   useEffect(() => {
     if (filteredItems.length === 0) return;
@@ -631,12 +640,13 @@ export default function MissionControlPage() {
       active="dashboard"
       title="Dashboard"
       subtitle="Listing onboarding, intake progress, revision loops, and audit trail"
-    >
-      <section className="card" style={{ order: 0 }}>
-        <div className="row" style={{ justifyContent: "space-between" }}>
-          <p className="small">Signed in as {operatorEmail || "operator"} ({operatorRole ?? "unknown"})</p>
+      sidebarMeta={
+        <div className="sidebar-account-card">
+          <p className="small">Signed in as</p>
+          <strong>{operatorEmail || "operator"}</strong>
+          <span className="sidebar-account-role">{operatorRole ?? "unknown"}</span>
           <button
-            className="secondary"
+            className="secondary sidebar-signout"
             type="button"
             onClick={async () => {
               await fetch("/api/operator-auth/sign-out", { method: "POST" });
@@ -646,14 +656,15 @@ export default function MissionControlPage() {
             Sign Out
           </button>
         </div>
-      </section>
+      }
+    >
       <section className="card" style={{ order: 1 }}>
         <h2>Operations Menu</h2>
-        <p className="small">Select the admin tool you need. Listing operations remain the primary working view below.</p>
-        {!canAdmin ? <p className="small">Editor access is view-only for operations.</p> : null}
-        <div className="row">
+        <p className="small ops-menu-copy">Select the admin tool you need. Listing operations remain the primary working view below.</p>
+        {!canAdmin ? <p className="small ops-menu-copy">Editor access is view-only for operations.</p> : null}
+        <div className="ops-menu-buttons">
           <button
-            className={activeOpsPanel === "add-brokerage" ? "primary" : "secondary"}
+            className={`ops-menu-btn ${activeOpsPanel === "add-brokerage" ? "primary" : "secondary"}`}
             type="button"
             onClick={() => setActiveOpsPanel("add-brokerage")}
             disabled={!canAdmin}
@@ -661,7 +672,7 @@ export default function MissionControlPage() {
             1. Add Brokerage
           </button>
           <button
-            className={activeOpsPanel === "update-brokerage" ? "primary" : "secondary"}
+            className={`ops-menu-btn ${activeOpsPanel === "update-brokerage" ? "primary" : "secondary"}`}
             type="button"
             onClick={() => setActiveOpsPanel("update-brokerage")}
             disabled={!canAdmin}
@@ -669,7 +680,7 @@ export default function MissionControlPage() {
             2. Update Brokerage
           </button>
           <button
-            className={activeOpsPanel === "create-client" ? "primary" : "secondary"}
+            className={`ops-menu-btn ${activeOpsPanel === "create-client" ? "primary" : "secondary"}`}
             type="button"
             onClick={() => setActiveOpsPanel("create-client")}
             disabled={!canAdmin}
@@ -677,7 +688,7 @@ export default function MissionControlPage() {
             3. Create Listing
           </button>
           <button
-            className={activeOpsPanel === "dev-links" ? "primary" : "secondary"}
+            className={`ops-menu-btn ${activeOpsPanel === "dev-links" ? "primary" : "secondary"}`}
             type="button"
             onClick={() => setActiveOpsPanel("dev-links")}
             disabled={!canAdmin}
@@ -687,7 +698,26 @@ export default function MissionControlPage() {
         </div>
       </section>
 
-      <section className="mission-grid" style={{ order: 2 }}>
+      <section className="dashboard-stats" style={{ order: 2 }}>
+        <article className="dashboard-stat">
+          <span>Total Listings</span>
+          <strong>{statusSummary.total}</strong>
+        </article>
+        <article className="dashboard-stat">
+          <span>Active Queue</span>
+          <strong>{statusSummary.active}</strong>
+        </article>
+        <article className="dashboard-stat">
+          <span>Review Ready</span>
+          <strong>{statusSummary.reviewReady}</strong>
+        </article>
+        <article className="dashboard-stat">
+          <span>Approved</span>
+          <strong>{statusSummary.approved}</strong>
+        </article>
+      </section>
+
+      <section className="mission-grid" style={{ order: 3 }}>
         <article className="card">
           <div className="panel-head">
             <h2>Listings</h2>

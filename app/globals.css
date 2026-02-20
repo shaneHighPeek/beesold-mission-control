@@ -56,13 +56,13 @@ a {
 }
 
 .shell-sidebar {
-  padding: 0.7rem 0.7rem;
+  padding: 0.78rem 0.72rem;
   background: linear-gradient(180deg, var(--nav), #272f4e 45%, #222a46);
   color: #e8edff;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: 0.82rem;
 }
 
 .brand-mark {
@@ -123,12 +123,47 @@ a {
 }
 
 .shell-sidebar-footer {
-  margin-top: auto;
   padding: 0.6rem 0.7rem;
   border-radius: 10px;
   background: rgba(137, 155, 255, 0.18);
   color: #d7e0ff;
   font-size: 0.84rem;
+}
+
+.shell-sidebar-meta {
+  margin-top: auto;
+}
+
+.sidebar-account-card {
+  border: 1px solid rgba(156, 178, 255, 0.45);
+  background: linear-gradient(150deg, rgba(136, 160, 255, 0.22), rgba(67, 197, 196, 0.16));
+  border-radius: 12px;
+  padding: 0.66rem 0.7rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.sidebar-account-card .small {
+  color: #dbe3ff;
+  font-size: 0.75rem;
+}
+
+.sidebar-account-card strong {
+  color: #ffffff;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.sidebar-account-role {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #d6e6ff;
+}
+
+.sidebar-signout {
+  width: 100%;
+  margin-top: 0.25rem;
 }
 
 .shell-main {
@@ -169,10 +204,10 @@ a {
 
 .card {
   border: 1px solid var(--line);
-  background: var(--card);
-  border-radius: 16px;
-  padding: 1rem;
-  box-shadow: 0 16px 35px -28px rgba(27, 45, 99, 0.6);
+  background: linear-gradient(170deg, #ffffff, #fcfdff);
+  border-radius: 18px;
+  padding: 1rem 1.02rem;
+  box-shadow: 0 18px 38px -30px rgba(27, 45, 99, 0.52);
 }
 
 .grid {
@@ -247,7 +282,7 @@ a {
 .mission-grid {
   display: grid;
   grid-template-columns: 360px 1fr;
-  gap: 1rem;
+  gap: 1.05rem;
 }
 
 .panel-head {
@@ -304,7 +339,7 @@ a {
 button {
   border: 1px solid transparent;
   border-radius: 10px;
-  padding: 0.58rem 0.9rem;
+  padding: 0.6rem 0.92rem;
   font: inherit;
   cursor: pointer;
 }
@@ -335,6 +370,52 @@ button:disabled {
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
+}
+
+.ops-menu-copy {
+  margin-top: 0.32rem;
+  margin-bottom: 0.85rem;
+}
+
+.ops-menu-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.55rem;
+}
+
+.ops-menu-btn {
+  width: 100%;
+  min-height: 44px;
+  font-weight: 600;
+}
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.dashboard-stat {
+  border: 1px solid #d5def8;
+  border-radius: 14px;
+  padding: 0.74rem 0.8rem;
+  background: linear-gradient(145deg, #f9fbff, #f4f8ff);
+  display: grid;
+  gap: 0.22rem;
+}
+
+.dashboard-stat span {
+  font-size: 0.78rem;
+  color: #5f6b92;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dashboard-stat strong {
+  font-size: 1.45rem;
+  color: #1f2a49;
+  letter-spacing: -0.02em;
 }
 
 .badge {
@@ -568,6 +649,7 @@ button:disabled {
 
   .quick-actions,
   .mission-grid,
+  .dashboard-stats,
   .highlight-grid {
     grid-template-columns: 1fr;
   }
