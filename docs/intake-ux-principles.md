@@ -1,4 +1,4 @@
-# Intake UX Principles (Phase 1)
+# Listing Intake UX Principles (Phase 1)
 
 ## Objective
 
@@ -11,7 +11,7 @@ Maximize completion rate and input quality by guiding clients through a professi
    - Keep cognitive load low.
 
 2. **Always-visible progress**
-   - Clients should know where they are and what remains.
+   - Listing owners should know where they are and what remains.
    - Use step index + progress bar.
 
 3. **Autosave-first architecture**
@@ -37,6 +37,10 @@ Maximize completion rate and input quality by guiding clients through a professi
 8. **Pre-submit review gate**
    - Show all captured responses before submission.
    - Confirm that submission starts internal pipeline processing.
+
+9. **Completion momentum cues**
+   - Segment completion should provide immediate positive feedback.
+   - Next segment intro should reduce perceived friction for long forms.
 
 ## Completion Outcomes
 

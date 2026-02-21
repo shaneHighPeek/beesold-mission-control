@@ -1,10 +1,10 @@
 # Database Setup (60-Minute Sprint)
 
-Last updated: 2026-02-18
+Last updated: 2026-02-20
 
 This gets BeeSold to a production-ready Postgres foundation quickly.
 
-## Current Status (2026-02-18)
+## Current Status (2026-02-20)
 
 - [x] Supabase project created.
 - [x] `docs/schema.sql` applied successfully.
@@ -14,6 +14,9 @@ This gets BeeSold to a production-ready Postgres foundation quickly.
 - [x] Brokerage read/update paths now support Postgres (Supabase REST) when enabled.
 - [x] Onboarding/auth/intake runtime writes now support Postgres mode.
 - [x] Pipeline/report storage supports Postgres mode (`jobs`, `job_status`, `job_outputs`, `reports`).
+- [x] Operator auth + role guards (`ADMIN`, `EDITOR`, `KLOR_SYSTEM`) added.
+- [x] Klor session signal API available (`GET /pipeline/session-data/{sessionId}`).
+- [x] Production domain connected (`https://app.beesold.hpp-cloud.com`).
 
 ## Goal For This Session
 
@@ -215,7 +218,7 @@ After schema is live, implement this next:
 7. Set `GOOGLE_DRIVE_ENABLED=true`.
 8. For production-like behavior set `GOOGLE_DRIVE_STRICT=true` (Drive errors fail request instead of stub fallback).
 8. Set parent folder:
-   - per brokerage in Mission Control: `Drive parent folder ID`, or
+   - per brokerage in Dashboard: `Drive parent folder ID`, or
    - per-brokerage env override: `DRIVE_PARENT_FOLDER_ID_<BROKERAGE_SLUG_UPPER>`, or
    - env fallback: `OMG_DRIVE_PARENT_FOLDER_ID`.
 9. Restart `npm run dev`.
@@ -239,6 +242,20 @@ After schema is live, implement this next:
 6. Verify audit:
    - `WELCOME_EMAIL_SENT` for successful delivery, or
    - `WELCOME_EMAIL_FAILED` with error details.
+
+Production verification query:
+
+```sql
+select created_at, recipient, from_email, provider_status, provider_message_id
+from outbound_emails
+order by created_at desc
+limit 10;
+```
+
+Expected for live provider:
+
+- `provider_status = 'SENT'` (not `STUBBED`)
+- `provider_message_id` populated for provider deliveries
 
 ## Acceptance Criteria For "DB Foundation Complete"
 

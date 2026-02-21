@@ -1,6 +1,8 @@
-# Mission Control
+# BeeSold Dashboard
 
-Secure multi-tenant onboarding + intake workflow for BeeSold white-label brokerages.
+Secure multi-tenant onboarding + listing intake workflow for BeeSold white-label brokerages.
+
+Production URL: `https://app.beesold.hpp-cloud.com`
 
 ## What is implemented
 
@@ -15,7 +17,7 @@ Secure multi-tenant onboarding + intake workflow for BeeSold white-label brokera
 - Partial submit + missing-items request loop + final submit
 - Audit timeline for key actions (invites, magic link use, password set, saves, uploads, submissions, status changes)
 - Google Drive folder creation and file routing (service-account integration with safe fallback)
-- Mission Control dashboard with invite status, completion, last activity, partial/final state, owner, missing items, drive link, and timeline
+- Dashboard with invite status, completion, last activity, partial/final state, owner, missing items, drive link, timeline, and archive controls
 
 ## Core routes
 
@@ -90,7 +92,7 @@ npm run typecheck
 1. Open operator sign-in: `http://localhost:3000/operator/sign-in`.
 2. Sign in with a configured admin account.
 3. Open Dashboard: `http://localhost:3000/mission-control`.
-4. Create client with brokerage slug `off-market-group`.
+4. Create listing with brokerage slug `off-market-group`.
 5. Copy the magic link from `db.outbound_emails` (mock store) if testing locally without real mailer.
 6. Open magic link, set password, continue to branded intake portal.
 7. Save steps, click Save & Exit, reload and verify resume step/progress.
@@ -104,7 +106,7 @@ npm run typecheck
    - `EMAIL_PROVIDER=postmark` and `POSTMARK_SERVER_TOKEN=...`
    - or `EMAIL_PROVIDER=sendgrid` and `SENDGRID_API_KEY=...`
 2. Restart server: `npm run dev`
-3. Create or resend an invite from Mission Control.
+3. Create or resend an invite from Dashboard.
 4. Verify:
    - `outbound_emails.provider_status = 'SENT'`
    - `outbound_emails.provider_message_id` is populated (provider-dependent)

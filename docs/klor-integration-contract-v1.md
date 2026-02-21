@@ -2,81 +2,66 @@
 
 Last updated: 2026-02-20  
 Owner: BeeSold Engineering  
-Consumer: OpenClaw/Klor system
+Consumer: OpenClaw / Klor
 
-## 1) Purpose
+## 1) Objective
 
-Klor connects to BeeSold to run automated post-intake processing on a client session.
+Define the machine-to-machine contract for Klor to ingest finalized BeeSold listing intake data and execute the pipeline stages that produce `REPORT_READY`.
 
-In v1, Klor performs:
+This contract is for API alignment and production execution behavior.
 
-1. Klor synthesis trigger
-2. Council/report generation trigger
-3. Session signal ingestion via BeeSold API (no direct Supabase access)
+## 2) Production Base URL
 
-BeeSold controls intake + workflow state.  
-Klor only calls approved machine endpoints with API-key auth.
+Use this base URL for production:
 
-## 2) BeeSold Workflow Context
+- `https://app.beesold.hpp-cloud.com`
 
-BeeSold intake flow summary:
+All endpoint paths below are relative to that base URL.
 
-1. Client is created and invited.
-2. Client completes intake form and uploads files.
-3. Session reaches `FINAL_SUBMITTED`.
-4. Klor is triggered.
-5. Council/report run is triggered.
-6. Session reaches `REPORT_READY` for operator approval.
+## 3) Authentication Model
 
-Klor should only start when BeeSold session is in `FINAL_SUBMITTED`.
+Klor authenticates with:
 
-## 3) Environments and Base URL
+- Header: `x-klor-api-key: <KLOR_KEY>`
 
-Klor must target the BeeSold server base URL.
+BeeSold validates keys against:
 
-Examples:
+- `KLOR_SYSTEM_API_KEYS` (server env var, comma-separated supported)
 
-- Local dev: `http://localhost:3000`
-- Production: your deployed BeeSold domain (for example `https://app.beesold.com`)
+Required request headers:
 
-Base URL is provided by BeeSold ops/development team per environment.
-
-## 4) Authentication
-
-Klor authenticates with header `x-klor-api-key`.
-
-BeeSold validates against env var:
-
-`KLOR_SYSTEM_API_KEYS=key1,key2,...`
-
-Required headers for machine calls:
-
-- `Content-Type: application/json`
+- `Content-Type: application/json` (for POST)
 - `x-klor-api-key: <KLOR_KEY>`
 
-If key is invalid or missing, BeeSold returns `401`.
+If key is missing/invalid, BeeSold returns `401`.
 
-## 5) Endpoints (Klor -> BeeSold)
+## 4) State Model (Pipeline-Relevant)
 
-## 5.0 Get Session Data (Signals)
+Klor must follow BeeSold state gating:
+
+1. Intake completes -> `FINAL_SUBMITTED`
+2. Klor trigger -> `KLOR_SYNTHESIS`
+3. Council trigger -> `COUNCIL_RUNNING`
+4. Report generation complete -> `REPORT_READY`
+
+Klor must **not** run synthesis before `FINAL_SUBMITTED`.
+
+## 5) Endpoints
+
+## 5.1 Get Session Signals
 
 `GET /pipeline/session-data/{sessionId}`
 
-Optional query param:
+Optional query:
 
-- `updatedSince=<ISO-8601 datetime>`
+- `updatedSince=<ISO-8601 UTC timestamp>`
 - Example: `?updatedSince=2026-02-20T04:12:00.000Z`
 
 Purpose:
 
-- Retrieve intake data and uploaded asset metadata for Klor analysis.
-- Keep data access constrained to BeeSold API boundary.
+- Retrieve listing intake signals (steps + uploads metadata) without direct DB access.
 
-Headers:
-
-- `x-klor-api-key: <KLOR_KEY>`
-
-Success response shape:
+Success response:
 
 ```json
 {
@@ -88,18 +73,22 @@ Success response shape:
       "currentStep": 7,
       "totalSteps": 7,
       "completionPct": 100,
-      "missingItems": []
+      "missingItems": [],
+      "createdAt": "ISO-8601",
+      "updatedAt": "ISO-8601"
     },
     "brokerage": {
       "id": "UUID",
       "slug": "off-market-group",
-      "name": "Off Market Group"
+      "name": "Off Market Group",
+      "shortName": "OffMarket"
     },
     "client": {
       "id": "UUID",
       "businessName": "Example Venue Pty Ltd",
       "contactName": "Example Owner",
-      "email": "owner@example.com"
+      "email": "owner@example.com",
+      "lastActivityAt": "ISO-8601"
     },
     "steps": [
       {
@@ -107,6 +96,7 @@ Success response shape:
         "title": "The Asset Snapshot",
         "order": 1,
         "isComplete": true,
+        "updatedAt": "ISO-8601",
         "data": {}
       }
     ],
@@ -117,7 +107,8 @@ Success response shape:
         "fileName": "P&L FY2025.pdf",
         "mimeType": "application/pdf",
         "sizeBytes": 128932,
-        "revision": 1
+        "revision": 1,
+        "uploadedAt": "ISO-8601"
       }
     ],
     "delta": {
@@ -128,17 +119,17 @@ Success response shape:
 }
 ```
 
-Filtering behavior:
+Rules:
 
-- If `updatedSince` is provided, BeeSold returns only steps/assets updated after that timestamp.
-- `session`, `brokerage`, and `client` blocks are always returned for context.
-- Invalid datetime returns `400` with error message.
+- `updatedSince` filters returned `steps` and `assets` only.
+- `session`, `brokerage`, and `client` always return for context.
+- Invalid `updatedSince` format returns `400`.
 
-## 5.1 Start Klor Synthesis
+## 5.2 Run Klor Synthesis
 
 `POST /pipeline/klor-run`
 
-Request body:
+Request:
 
 ```json
 {
@@ -146,7 +137,7 @@ Request body:
 }
 ```
 
-Success response:
+Success:
 
 ```json
 {
@@ -157,16 +148,15 @@ Success response:
 }
 ```
 
-Validation:
+Gate:
 
-- Session must exist.
 - Session must be `FINAL_SUBMITTED`.
 
-## 5.2 Start Council Run
+## 5.3 Run Council
 
 `POST /pipeline/council-run`
 
-Request body:
+Request:
 
 ```json
 {
@@ -174,7 +164,7 @@ Request body:
 }
 ```
 
-Success response:
+Success:
 
 ```json
 {
@@ -185,36 +175,23 @@ Success response:
 }
 ```
 
-Validation:
+Gate:
 
-- Session must exist.
-- Session should be in `KLOR_SYNTHESIS` (set by step 5.1).
+- Session must be `KLOR_SYNTHESIS`.
 
-## 6) How Klor Gets `sessionId`
+## 6) Execution Sequence (Required)
 
-Klor can receive `sessionId` from BeeSold via either:
+Per `sessionId`:
 
-1. Upstream integration payload (recommended).
-2. Onboarding API/webhook response when a client is created.
-3. Operator-provided handoff from Dashboard during early rollout.
+1. `GET /pipeline/session-data/{sessionId}`
+2. Confirm `data.session.status === "FINAL_SUBMITTED"`
+3. `POST /pipeline/klor-run`
+4. `POST /pipeline/council-run`
+5. Confirm session reaches `REPORT_READY` (via subsequent fetch/polling)
 
-`sessionId` is the single identifier Klor must store per run.
+## 7) Error Contract + Retry Policy
 
-## 7) Activation Rules
-
-Klor activation policy for v1:
-
-1. Pull signals with `GET /pipeline/session-data/{sessionId}`.
-2. Wait until BeeSold session status is `FINAL_SUBMITTED`.
-3. Call `POST /pipeline/klor-run`.
-4. On success, call `POST /pipeline/council-run`.
-4. Stop and flag for review on any non-2xx response.
-
-Do not run pipeline endpoints for sessions not yet finalized.
-
-## 8) Error Handling + Retries
-
-BeeSold error shape:
+Error shape:
 
 ```json
 {
@@ -223,38 +200,73 @@ BeeSold error shape:
 }
 ```
 
-Retry policy:
+Retry only on transient:
 
-1. Retry only for transient errors (`429`, `500`, `502`, `503`, `504`).
-2. Exponential backoff: 2s, 5s, 15s, 30s, 60s.
-3. Max 5 attempts per step.
-4. No retry for `400`/`401`/`403`/`404`/`422` (configuration or state issue).
+- `429`, `500`, `502`, `503`, `504`
 
-## 9) Operational Security Notes
+Backoff:
 
-1. Store Klor API key in secure secret storage only.
-2. Never log full API key.
-3. Rotate key if exposed.
-4. Use separate keys per environment (dev/stage/prod).
+1. 2s
+2. 5s
+3. 15s
+4. 30s
+5. 60s
 
-## 10) Optional Webhook Inbound (Non-Klor Pipeline Auth)
+No retry on:
 
-BeeSold also supports protected webhook ingestion:
+- `400`, `401`, `403`, `404`, `422`
 
-`POST /api/webhooks/client-intake`
+## 8) Session ID Source
 
-Header required:
+Klor must receive and persist `sessionId` from one of:
 
-`x-beesold-webhook-secret: <WEBHOOK_SHARED_SECRET>`
+1. Upstream orchestration payload
+2. BeeSold onboarding/webhook create response
+3. Operator handoff (temporary fallback)
 
-This is separate from Klor machine pipeline auth and should use a different secret.
+`sessionId` is the canonical key for all Klor operations in BeeSold.
 
-## 11) Quick Test Commands
+## 9) Scope and Access Boundaries
+
+Role boundaries:
+
+1. `ADMIN`: Dashboard/operator actions
+2. `EDITOR`: read-focused dashboard
+3. `KLOR_SYSTEM`: machine endpoints only (`/pipeline/*`)
+
+Klor must not call operator-only endpoints.
+
+## 10) Security Controls
+
+1. Keep Klor key in secure secret manager only.
+2. Never log full key values.
+3. Rotate keys immediately if exposed.
+4. Use separate keys for dev/staging/prod.
+
+## 11) Related Inbound Webhook (Separate Secret)
+
+BeeSold onboarding webhook endpoint:
+
+- `POST /api/webhooks/client-intake`
+
+Uses separate header:
+
+- `x-beesold-webhook-secret: <WEBHOOK_SHARED_SECRET>`
+
+This is distinct from `x-klor-api-key`.
+
+## 12) Production Test Commands
 
 ```bash
-BASE_URL="http://localhost:3000"
+BASE_URL="https://app.beesold.hpp-cloud.com"
 KLOR_KEY="your-klor-api-key"
 SESSION_ID="your-session-id"
+
+curl -s "$BASE_URL/pipeline/session-data/$SESSION_ID" \
+  -H "x-klor-api-key: $KLOR_KEY"
+
+curl -s "$BASE_URL/pipeline/session-data/$SESSION_ID?updatedSince=2026-02-20T04:12:00.000Z" \
+  -H "x-klor-api-key: $KLOR_KEY"
 
 curl -s -X POST "$BASE_URL/pipeline/klor-run" \
   -H "Content-Type: application/json" \
@@ -265,16 +277,5 @@ curl -s -X POST "$BASE_URL/pipeline/council-run" \
   -H "Content-Type: application/json" \
   -H "x-klor-api-key: $KLOR_KEY" \
   -d "{\"sessionId\":\"$SESSION_ID\"}"
-
-curl -s "$BASE_URL/pipeline/session-data/$SESSION_ID" \
-  -H "x-klor-api-key: $KLOR_KEY"
-
-curl -s "$BASE_URL/pipeline/session-data/$SESSION_ID?updatedSince=2026-02-20T04:12:00.000Z" \
-  -H "x-klor-api-key: $KLOR_KEY"
 ```
 
-## 12) Current Role Permissions (v1)
-
-1. `ADMIN`: full Dashboard + protected operator actions.
-2. `EDITOR`: read-focused Dashboard access.
-3. `KLOR_SYSTEM`: pipeline execution via API key on machine endpoints only.

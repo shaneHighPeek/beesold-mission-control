@@ -1,16 +1,20 @@
 # Acceptance Criteria — Phase 1
 
-Status: ✅ Completed (current implementation baseline)
+Status: ✅ Completed (baseline shipped and running on production domain)
 
-## Phase 2 Handoff Status (2026-02-18)
+## Phase 2 Handoff Status (2026-02-20)
 
 - [x] Supabase schema and brokerage seed completed.
 - [x] Local environment secrets configured.
 - [x] Driver toggle and Supabase-backed brokerage persistence implemented.
 - [x] Onboarding/auth/intake + mission-control core paths now run in Postgres mode behind driver toggle.
 - [x] Pipeline/report persistence paths migrated and validated in Postgres mode.
+- [x] Dashboard/archive UX refinements shipped (Listings-first terminology).
+- [x] Operator auth roles (`ADMIN`, `EDITOR`) enforced on protected Dashboard routes.
+- [x] Machine auth role (`KLOR_SYSTEM`) enforced on pipeline routes.
+- [x] Klor signal API endpoint available (`GET /pipeline/session-data/{sessionId}`).
 
-## Intake System
+## Listing Intake System
 
 - [x] Client access requires tokenized session URL.
 - [x] Intake flow is multi-step with progressive disclosure.
@@ -26,7 +30,7 @@ Status: ✅ Completed (current implementation baseline)
 ## Workflow Engine
 
 - [x] State machine supports:
-  `DRAFT → IN_PROGRESS → SUBMITTED → KLOR_SYNTHESIS → COUNCIL_RUNNING → REPORT_READY → APPROVED`
+  `DRAFT → IN_PROGRESS → FINAL_SUBMITTED → KLOR_SYNTHESIS → COUNCIL_RUNNING → REPORT_READY → APPROVED`
 - [x] Transition validation rejects invalid state movement.
 - [x] Jobs and outputs are tracked (`jobs`, `job_status`, `job_outputs`).
 - [x] Audit entries are recorded for state and decision events.
@@ -39,12 +43,14 @@ Status: ✅ Completed (current implementation baseline)
 - [x] `GET /report`
 - [x] `POST /approval`
 
-## Mission Control UI
+## Dashboard UI
 
 - [x] Intake list shows lifecycle state.
 - [x] Pipeline state/jobs are visible.
 - [x] Report is viewable when available.
 - [x] Approve/reject controls enforce human gate.
+- [x] Archive/restore hides stale records without deleting data.
+- [x] Search/filter supports brokerage/status/archive visibility.
 
 ## Overall Success Path
 

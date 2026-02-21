@@ -1,4 +1,4 @@
-# Client Intake Journey Map (Phase 1)
+# Listing Intake Journey Map (Phase 1)
 
 ## Stage 1: Secure Entry
 
@@ -26,7 +26,7 @@
 
 ## Stage 5: Handoff to Internal Pipeline
 
-- Intake transitions to `SUBMITTED`.
+- Intake transitions to `FINAL_SUBMITTED`.
 - System runs deterministic pipeline:
   - `KLOR_SYNTHESIS`
   - `COUNCIL_RUNNING`
@@ -34,6 +34,6 @@
 
 ## Stage 6: Operator Decision
 
-- Operator reviews report in Mission Control.
+- Operator reviews report in Dashboard.
 - Operator approves (or rejects for rework).
 - Approval transitions state to `APPROVED`.

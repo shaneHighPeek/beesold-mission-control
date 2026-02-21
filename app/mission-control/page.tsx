@@ -99,6 +99,7 @@ export default function MissionControlPage() {
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [devInvites, setDevInvites] = useState<DevInvite[]>([]);
   const [message, setMessage] = useState("");
+  const [isCreatingClient, setIsCreatingClient] = useState(false);
   const [missingItemsDraft, setMissingItemsDraft] = useState("");
   const [createForm, setCreateForm] = useState({
     brokerageSlug: "off-market-group",
@@ -372,32 +373,39 @@ export default function MissionControlPage() {
   }, [filteredItems, selectedSessionId]);
 
   async function createClient() {
+    if (isCreatingClient) return;
     if (!canAdmin) {
       setMessage("Only admins can create clients.");
       return;
     }
-    const response = await fetch("/api/onboarding/clients", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...createForm, triggerInvite: true }),
-    });
-    const payload = (await response.json()) as { ok: boolean; error?: string };
+    setIsCreatingClient(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/onboarding/clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...createForm, triggerInvite: true }),
+      });
+      const payload = (await response.json()) as { ok: boolean; error?: string };
 
-    if (!payload.ok) {
-      setMessage(payload.error ?? "Unable to create client");
-      return;
+      if (!payload.ok) {
+        setMessage(payload.error ?? "Unable to create client");
+        return;
+      }
+
+      setMessage("Client created and invite sent.");
+      setCreateForm({
+        brokerageSlug: createForm.brokerageSlug,
+        businessName: "",
+        contactName: "",
+        email: "",
+        phone: "",
+        assignedOwner: "",
+      });
+      await refresh();
+    } finally {
+      setIsCreatingClient(false);
     }
-
-    setMessage("Client created and invite sent.");
-    setCreateForm({
-      brokerageSlug: createForm.brokerageSlug,
-      businessName: "",
-      contactName: "",
-      email: "",
-      phone: "",
-      assignedOwner: "",
-    });
-    await refresh();
   }
 
   async function createBrokerage() {
@@ -1213,13 +1221,20 @@ export default function MissionControlPage() {
           className="primary"
           onClick={createClient}
           disabled={
+            isCreatingClient ||
             !createForm.businessName ||
             !createForm.contactName ||
             !createForm.email ||
             activeBrokerages.length === 0
           }
         >
-          Create + Send Invite
+          {isCreatingClient ? (
+            <span className="row" style={{ justifyContent: "center" }}>
+              <span className="spinner" /> Creating...
+            </span>
+          ) : (
+            "Create + Send Invite"
+          )}
         </button>
         {activeBrokerages.length === 0 ? (
           <p className="small">No active brokerages available. Restore or create a brokerage first.</p>
