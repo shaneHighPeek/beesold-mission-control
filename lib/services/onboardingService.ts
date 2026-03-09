@@ -35,7 +35,7 @@ export async function createOrUpdateClientOnboarding(input: {
   phone?: string;
   assignedOwner?: string;
   triggerInvite?: boolean;
-  source: "ADMIN" | "API";
+  source: "ADMIN" | "API" | "BROKER";
   idempotencyKey?: string;
 }): Promise<{
   clientId: string;

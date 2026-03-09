@@ -35,6 +35,18 @@ Production URL: `https://app.beesold.hpp-cloud.com`
 - `GET /api/operator-auth/me`
 - `POST /api/operator-auth/sign-in`
 - `POST /api/operator-auth/sign-out`
+- `GET /broker/sign-in`
+- `GET /broker/pipeline`
+- `GET /broker/settings`
+- `GET /api/broker-auth/me`
+- `POST /api/broker-auth/sign-in`
+- `POST /api/broker-auth/sign-out`
+- `GET /api/broker/brokerage`
+- `PATCH /api/broker/brokerage`
+- `POST /api/broker/clients`
+- `GET /api/broker/pipeline`
+- `POST /api/broker/intakes/[sessionId]/resend-invite`
+- `POST /api/broker/intakes/[sessionId]/magic-link`
 - `GET /pipeline/session-data/[sessionId]` (admin or Klor API key; optional `updatedSince` query param)
 - `GET /api/mission-control/intakes`
 - `GET /api/mission-control/intakes/[sessionId]/timeline`
@@ -67,6 +79,10 @@ Production URL: `https://app.beesold.hpp-cloud.com`
 - `OPERATOR_EDITOR_PASSWORD` (required if editor emails are configured)
 - `KLOR_SYSTEM_API_KEYS` (optional CSV; keys accepted via `x-klor-api-key` for system pipeline routes)
 - `WEBHOOK_SHARED_SECRET` (optional in local; required in production for `/api/webhooks/client-intake` via `x-beesold-webhook-secret`)
+- `BROKER_SESSION_SECRET` (HMAC secret for broker portal sessions)
+- `BROKER_SESSION_TTL_HOURS` (default `12`)
+- `BROKER_PORTAL_USERS` (optional CSV credentials; format `slug|email|password`, e.g. `off-market-group|broker@omg.com|strong-pass`)
+- `BROKER_PORTAL_PASSWORD` (fallback single password when `BROKER_PORTAL_USERS` is not set; email must match brokerage sender email)
 
 ## Add a new brokerage brand
 

@@ -161,6 +161,12 @@ type JobRow = {
   completed_at: string | null;
 };
 
+type IntakeStatusRow = {
+  session_id: string;
+  status: IntakeLifecycleState;
+  created_at: string;
+};
+
 type ReportRow = {
   id: string;
   session_id: string;
@@ -1088,7 +1094,10 @@ export async function listIntakeAssetsForSessionFromSupabase(sessionId: string):
   return rows.map(mapAsset);
 }
 
-export async function listMissionControlIntakesFromSupabase(options?: { includeArchived?: boolean }): Promise<
+export async function listMissionControlIntakesFromSupabase(options?: {
+  includeArchived?: boolean;
+  brokerageId?: string;
+}): Promise<
   Array<{
     id: string;
     brokerage: { id: string; slug: string; name: string; isArchived?: boolean };
@@ -1112,15 +1121,27 @@ export async function listMissionControlIntakesFromSupabase(options?: { includeA
     lastActivityAt: string;
     missingItems: string[];
     driveFolderUrl?: string;
+    createdAt: string;
+    updatedAt: string;
     report?: unknown;
     jobs: unknown[];
   }>
 > {
   const includeArchived = options?.includeArchived ?? false;
+  const brokerageId = options?.brokerageId;
+  const sessionPath = brokerageId
+    ? `intake_sessions?select=*&brokerage_id=eq.${encodeURIComponent(brokerageId)}`
+    : "intake_sessions?select=*";
+  const clientPath = brokerageId
+    ? `client_identities?select=*&brokerage_id=eq.${encodeURIComponent(brokerageId)}`
+    : "client_identities?select=*";
+  const brokeragePath = brokerageId
+    ? `brokerages?select=*&id=eq.${encodeURIComponent(brokerageId)}`
+    : "brokerages?select=*";
   const [sessions, clients, brokerages, steps, reports, jobs] = await Promise.all([
-    request<IntakeSessionRow[]>("intake_sessions?select=*", { method: "GET" }),
-    request<ClientRow[]>("client_identities?select=*", { method: "GET" }),
-    request<BrokerageRow[]>("brokerages?select=*", { method: "GET" }),
+    request<IntakeSessionRow[]>(sessionPath, { method: "GET" }),
+    request<ClientRow[]>(clientPath, { method: "GET" }),
+    request<BrokerageRow[]>(brokeragePath, { method: "GET" }),
     request<IntakeStepRow[]>("intake_steps?select=session_id,is_complete", { method: "GET" }),
     request<ReportRow[]>("reports?select=*", { method: "GET" }),
     request<JobRow[]>("jobs?select=*", { method: "GET" }),
@@ -1176,6 +1197,8 @@ export async function listMissionControlIntakesFromSupabase(options?: { includeA
       lastActivityAt: client.lastActivityAt,
       missingItems: session.missingItems,
       driveFolderUrl: session.driveFolderUrl,
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt,
       report: reportMap.get(session.id),
       jobs: jobsMap.get(session.id) ?? [],
     };
@@ -1184,6 +1207,20 @@ export async function listMissionControlIntakesFromSupabase(options?: { includeA
   return includeArchived
     ? shaped
     : shaped.filter((item) => !item.client.isArchived && !item.brokerage.isArchived);
+}
+
+export async function listLatestStatusChangesFromSupabase(): Promise<
+  Array<{ sessionId: string; status: IntakeLifecycleState; createdAt: string }>
+> {
+  const rows = await request<IntakeStatusRow[]>("intake_status?select=session_id,status,created_at&order=created_at.asc", {
+    method: "GET",
+  });
+
+  return rows.map((row) => ({
+    sessionId: row.session_id,
+    status: row.status,
+    createdAt: row.created_at,
+  }));
 }
 
 export async function createJobInSupabase(sessionId: string, kind: Job["kind"]): Promise<Job> {

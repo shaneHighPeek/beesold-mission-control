@@ -22,20 +22,33 @@ function renderWelcomeEmail(input: {
 }): { subject: string; html: string } {
   const { brokerage, client, magicLinkUrl } = input;
   const supportLabel = brokerage.senderName;
+  const logoMarkup = brokerage.branding.logoUrl
+    ? `<img src="${brokerage.branding.logoUrl}" alt="${brokerage.name} logo" style="max-width:180px;height:auto;display:block;margin-bottom:14px;" />`
+    : "";
+  const footerBranding = brokerage.branding.showBeeSoldBranding
+    ? `<p style="font-size:12px;color:#6b7280;margin:6px 0 0;">Powered by BeeSold</p>`
+    : "";
 
   return {
     subject: `${brokerage.name} secure intake portal access`,
     html: `
-      <div style="font-family:Arial,sans-serif;line-height:1.5;color:#1b1b1b;">
-        <h2 style="margin-bottom:8px;">Welcome to ${brokerage.name}</h2>
-        <p>Hi ${client.contactName}, your secure intake portal is ready.</p>
-        <p>This intake is designed for multiple sessions. You can save progress and return at any time.</p>
-        <p>
-          <a href="${magicLinkUrl}" style="display:inline-block;padding:10px 16px;border-radius:8px;background:${brokerage.branding.primaryColor};color:#fff;text-decoration:none;">Open Secure Portal</a>
-        </p>
-        <p>On first access, you can set a password. You can always request a new magic link later.</p>
-        <p style="font-size:12px;color:#555;">${brokerage.branding.legalFooter}</p>
-        <p style="font-size:12px;color:#777;">Sent by ${supportLabel}.</p>
+      <div style="font-family:Arial,sans-serif;line-height:1.5;color:#1b1b1b;background:#f6f8ff;padding:24px;">
+        <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e1e7f5;border-radius:14px;overflow:hidden;">
+          <div style="height:8px;background:linear-gradient(90deg, ${brokerage.branding.primaryColor}, ${brokerage.branding.secondaryColor});"></div>
+          <div style="padding:22px 22px 18px;">
+            ${logoMarkup}
+            <h2 style="margin:0 0 8px;color:${brokerage.branding.primaryColor};">Welcome to ${brokerage.name}</h2>
+            <p style="margin:0 0 10px;">Hi ${client.contactName}, your secure intake portal is ready.</p>
+            <p style="margin:0 0 14px;">This intake is designed for multiple sessions. You can save progress and return at any time.</p>
+            <p style="margin:0 0 16px;">
+              <a href="${magicLinkUrl}" style="display:inline-block;padding:10px 16px;border-radius:8px;background:${brokerage.branding.primaryColor};color:#fff;text-decoration:none;font-weight:600;">Open Secure Portal</a>
+            </p>
+            <p style="margin:0 0 12px;">On first access, you can set a password. You can always request a new magic link later.</p>
+            <p style="font-size:12px;color:#4b5563;margin:0 0 4px;">${brokerage.branding.legalFooter}</p>
+            <p style="font-size:12px;color:#6b7280;margin:0;">Sent by ${supportLabel} &lt;${brokerage.senderEmail}&gt;.</p>
+            ${footerBranding}
+          </div>
+        </div>
       </div>
     `.trim(),
   };

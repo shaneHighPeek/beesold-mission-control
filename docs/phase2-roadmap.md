@@ -1,8 +1,10 @@
 # BeeSold Operational Roadmap
 
-Last updated: 2026-02-20
+Last updated: 2026-03-09
 
 This roadmap is the execution plan to move BeeSold Dashboard from current prototype behavior to fully operational production delivery for Off Market Group, then scale to additional brokerages.
+
+Execution tracker for day-by-day progress: `docs/demo-execution-checklist.md`
 
 ## Progress Snapshot (2026-02-20)
 
@@ -19,6 +21,31 @@ This roadmap is the execution plan to move BeeSold Dashboard from current protot
 - [x] Machine auth added (`KLOR_SYSTEM`) via `x-klor-api-key`.
 - [x] Klor session signal endpoint added (`GET /pipeline/session-data/{sessionId}` + `updatedSince`).
 - [ ] Branded email provider fully verified in production (Postmark live path under final verification).
+
+## Client Demo Priority Sprint (Week of 2026-03-09)
+
+This section overrides normal sequencing for this week's brokerage client demo. These items are now P0 and must be demo-ready first.
+
+| ID | Priority | Status | Workstream | Owner | Effort | Done Criteria |
+| --- | --- | --- | --- | --- | --- | --- |
+| DEMO-01 | P0 | TODO | White-label broker portal (kanban pipeline) | Frontend + Backend | M | Broker user can sign in, view only their tenant's clients in a card-based kanban by lifecycle state, and each card shows live aging timer (`time in system` + `time in current state`). |
+| DEMO-02 | P0 | TODO | Broker self-serve client entry + branded invite | Backend + Frontend | M | Broker can create a client from their portal; action triggers branded BeeSold invite and questionnaire start flow without operator intervention. |
+| DEMO-03 | P0 | TODO | Broker branding controls (mirror update brokerage) | Frontend + Backend | S | Broker can update logo, primary/secondary colors, sender display name, and legal footer from broker portal; changes propagate to intake portal + invite templates. |
+| DEMO-04 | P0 | TODO | Custom domain + DNS onboarding for white-label brokerages | DevOps + Backend | M | Brokerage can map branded portal domain (CNAME), pass ownership verification, and route traffic to tenant portal with TLS. |
+| DEMO-05 | P0 | TODO | Branded email domains per brokerage | DevOps + Backend | M | Brokerage sender domains verified (SPF/DKIM/DMARC), invites send from brokerage-branded `from` domain, and delivery status is auditable. |
+| DEMO-06 | P0 | TODO | Commercial property intake variant (new questionnaire) | Product + Frontend + Backend | M | New questionnaire variant can be selected per session/template, with separate question set + validation flow for commercial listings. |
+
+### Definition of Demo Ready (This Week)
+
+Demo is ready when:
+
+- Broker can authenticate into a branded portal and only see their tenant records.
+- Broker can add a client and trigger branded invite/questionnaire from broker portal.
+- Broker can update logo/colors/basic branding and see changes reflected in portal and emails.
+- Kanban board shows lifecycle columns with card timers updating at least every minute.
+- At least one brokerage custom domain is connected and serving TLS.
+- At least one brokerage branded sender domain is verified and sending invites in production-like mode.
+- Commercial questionnaire variant is accessible and persists responses independently from existing OMG intake.
 
 ## MVP Punchlist (Execution Board)
 
@@ -58,14 +85,15 @@ Use this as the active checklist. MVP is ready only when all items below are com
 
 ### Suggested Execution Order (Critical Path)
 
-1. MVP-01
-2. MVP-02
-3. MVP-03
-4. MVP-04
-5. MVP-05
-6. MVP-06
-7. MVP-07
-8. MVP-08
+1. DEMO-01
+2. DEMO-02
+3. DEMO-03
+4. DEMO-04
+5. DEMO-05
+6. DEMO-06
+7. MVP-06
+8. MVP-07
+9. MVP-08
 
 ### Definition of MVP Complete
 
@@ -160,6 +188,50 @@ Reference runbook: `docs/database-setup.md`.
 3. Connect real Google Drive credentials and replace stub folder/file creation.
 4. Connect real email provider transport and delivery webhooks.
 5. Add auth endpoint rate limits and failed-attempt logging.
+
+## Immediate Build Order (Demo Critical Path)
+
+1. DEMO-01 broker portal kanban + timers.
+2. DEMO-02 broker self-serve client entry and invite trigger.
+3. DEMO-03 broker branding controls (logo/colors/sender/legal footer).
+4. DEMO-04 custom domain DNS onboarding and tenant domain resolution.
+5. DEMO-05 branded sender domain verification and production delivery checks.
+6. DEMO-06 commercial listing questionnaire variant and template routing.
+
+## White-Label Domain and Email Branding Plan
+
+Use this as the implementation path for "how do we do DNS + branded emails?".
+
+### Portal Domains (DNS + TLS)
+
+1. Data model:
+   - add brokerage fields: `custom_domain`, `domain_status`, `domain_verification_token`, `domain_verified_at`.
+2. DNS flow:
+   - broker enters desired domain (example `portal.brokername.com`).
+   - system generates verification TXT record token.
+   - broker adds TXT + CNAME records at their DNS host.
+3. Platform routing:
+   - configure wildcard/custom domain support on hosting platform.
+   - map verified domain to brokerage slug at request time via host header.
+4. TLS:
+   - rely on managed certificate provisioning after domain verification.
+5. UI:
+   - show DNS instructions, verification status, and recheck action in broker branding settings.
+
+### Branded Emails (Per Brokerage Domain)
+
+1. Provider strategy:
+   - use Postmark Message Streams or SendGrid domain authentication per brokerage.
+2. DNS records per brokerage sender domain:
+   - SPF include record for provider.
+   - DKIM CNAME records (provider-generated).
+   - DMARC policy (`p=none` initially, tighten later).
+3. App changes:
+   - store per-brokerage sender identity + verification status.
+   - block "send branded" until domain is verified, with fallback sender option.
+4. Observability:
+   - persist provider message id/status/events in `outbound_emails`.
+   - add dashboard row showing sender verification and last delivery status.
 
 ## Phase A — Production Foundation (Platform + Security)
 
@@ -365,11 +437,12 @@ Exit criteria:
 
 Suggested implementation order:
 
-1. Phase A (foundation/security)
-2. Phase B (Google + email)
-3. Phase C (form/doc policy hardening)
-4. Phase D (ops UX maturity)
-5. Phase E (test + UAT + launch)
+1. DEMO-01..06 (client demo sprint priority)
+2. Phase A (foundation/security completion items)
+3. Phase B (Google + email production hardening completion items)
+4. Phase C (form/doc policy hardening)
+5. Phase D (ops UX maturity)
+6. Phase E (test + UAT + launch)
 
 Suggested owners:
 

@@ -15,6 +15,7 @@ import {
   addAuditLogInSupabase,
   forceStatusInSupabase,
   getAuditForSessionFromSupabase,
+  listLatestStatusChangesFromSupabase,
   getReportBySessionIdFromSupabase,
   getSessionByIdFromSupabase,
   listMissionControlIntakesFromSupabase,
@@ -26,10 +27,12 @@ import { sendInviteForSession } from "@/lib/services/onboardingService";
 import { requestMissingItems } from "@/lib/services/intakeService";
 import { nowIso } from "@/lib/utils/id";
 
-export async function listMissionControlIntakes(options?: { includeArchived?: boolean }) {
+export async function listMissionControlIntakes(options?: { includeArchived?: boolean; brokerageId?: string }) {
   const includeArchived = options?.includeArchived ?? false;
+  const brokerageId = options?.brokerageId;
   if (isPostgresDriver()) {
-    return listMissionControlIntakesFromSupabase({ includeArchived });
+    const shaped = await listMissionControlIntakesFromSupabase({ includeArchived, brokerageId });
+    return brokerageId ? shaped.filter((item) => item.brokerage.id === brokerageId) : shaped;
   }
   const db = getDb();
 
@@ -67,11 +70,45 @@ export async function listMissionControlIntakes(options?: { includeArchived?: bo
       lastActivityAt: client.lastActivityAt,
       missingItems: session.missingItems,
       driveFolderUrl: session.driveFolderUrl,
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt,
       report: db.reports.find((report) => report.sessionId === session.id),
       jobs: db.jobs.filter((job) => job.sessionId === session.id),
     };
   });
-  return includeArchived ? shaped : shaped.filter((item) => !item.client.isArchived && !item.brokerage.isArchived);
+  const tenantFiltered = brokerageId ? shaped.filter((item) => item.brokerage.id === brokerageId) : shaped;
+  return includeArchived
+    ? tenantFiltered
+    : tenantFiltered.filter((item) => !item.client.isArchived && !item.brokerage.isArchived);
+}
+
+export async function getLatestStatusChangeBySessionId(
+  sessionIds: string[],
+): Promise<Record<string, { status: string; createdAt: string }>> {
+  if (sessionIds.length === 0) return {};
+  if (isPostgresDriver()) {
+    const rows = await listLatestStatusChangesFromSupabase();
+    const sessionSet = new Set(sessionIds);
+    return rows.reduce<Record<string, { status: string; createdAt: string }>>((acc, row) => {
+      if (!sessionSet.has(row.sessionId)) return acc;
+      const existing = acc[row.sessionId];
+      if (!existing || new Date(row.createdAt).getTime() > new Date(existing.createdAt).getTime()) {
+        acc[row.sessionId] = { status: row.status, createdAt: row.createdAt };
+      }
+      return acc;
+    }, {});
+  }
+
+  const sessionSet = new Set(sessionIds);
+  const db = getDb();
+  return db.intake_status.reduce<Record<string, { status: string; createdAt: string }>>((acc, row) => {
+    if (!sessionSet.has(row.sessionId)) return acc;
+    const existing = acc[row.sessionId];
+    if (!existing || new Date(row.createdAt).getTime() > new Date(existing.createdAt).getTime()) {
+      acc[row.sessionId] = { status: row.status, createdAt: row.createdAt };
+    }
+    return acc;
+  }, {});
 }
 
 export async function getReport(sessionId: string) {
@@ -96,6 +133,25 @@ export async function resendInvite(sessionId: string) {
 export async function sendNewMagicLink(sessionId: string) {
   const invite = await sendInviteForSession(sessionId);
   return invite;
+}
+
+export async function assertSessionInBrokerage(input: {
+  sessionId: string;
+  brokerageId: string;
+}): Promise<void> {
+  if (isPostgresDriver()) {
+    const session = await getSessionByIdFromSupabase(input.sessionId);
+    if (!session) throw new Error("Session not found");
+    if (session.brokerageId !== input.brokerageId) {
+      throw new Error("Cross-tenant access denied");
+    }
+    return;
+  }
+
+  const session = getSessionById(input.sessionId);
+  if (session.brokerageId !== input.brokerageId) {
+    throw new Error("Cross-tenant access denied");
+  }
 }
 
 export async function markMissingItems(input: {
