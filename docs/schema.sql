@@ -30,7 +30,14 @@ create table brokerages (
   short_name text,
   sender_name text not null,
   sender_email text not null,
+  sender_domain text,
+  sender_domain_status text not null default 'NOT_CONFIGURED',
+  sender_domain_verified_at timestamptz,
   portal_base_url text not null,
+  custom_domain text unique,
+  domain_status text not null default 'NOT_CONFIGURED',
+  domain_verification_token text,
+  domain_verified_at timestamptz,
   drive_parent_folder_id text,
   logo_url text,
   primary_color text not null,
@@ -68,6 +75,7 @@ create table intake_sessions (
   id uuid primary key default gen_random_uuid(),
   client_id uuid not null references client_identities(id) on delete cascade,
   brokerage_id uuid not null references brokerages(id) on delete cascade,
+  intake_template text not null default 'OMG_V1',
   status intake_lifecycle_state not null default 'INVITED',
   current_step int not null default 1,
   total_steps int not null,
@@ -219,6 +227,7 @@ create table audit_log (
 
 -- Indexes
 create index idx_brokerages_slug on brokerages(slug);
+create unique index if not exists idx_brokerages_custom_domain on brokerages(custom_domain) where custom_domain is not null;
 create index idx_clients_brokerage_email on client_identities(brokerage_id, email);
 create index idx_sessions_brokerage_status on intake_sessions(brokerage_id, status);
 create index idx_sessions_client on intake_sessions(client_id);

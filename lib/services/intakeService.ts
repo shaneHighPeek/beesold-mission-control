@@ -1,10 +1,12 @@
 import {
-  INTAKE_STEP_DEFINITIONS,
+  DEFAULT_INTAKE_TEMPLATE,
+  getIntakeStepDefinitions,
   isFieldRequired,
   isFieldVisible,
   type IntakeFieldDefinition,
+  type IntakeStepDefinition,
 } from "@/lib/domain/intakeConfig";
-import type { BrokeragePortalTone, IntakeAsset, IntakeSession } from "@/lib/domain/types";
+import type { BrokeragePortalTone, IntakeAsset, IntakeSession, IntakeTemplateKey } from "@/lib/domain/types";
 import { isPostgresDriver } from "@/lib/persistence/driver";
 import {
   addAuditLog,
@@ -43,8 +45,9 @@ import { ensureDriveFolder, uploadAssetToDrive } from "@/lib/services/googleDriv
 function validateRequired(
   stepKey: string,
   data: Record<string, unknown>,
+  definitions: IntakeStepDefinition[],
 ): Array<{ field: string; message: string }> {
-  const def = INTAKE_STEP_DEFINITIONS.find((item) => item.key === stepKey);
+  const def = definitions.find((item) => item.key === stepKey);
   if (!def) {
     return [{ field: stepKey, message: "Unknown step" }];
   }
@@ -157,7 +160,7 @@ function asLinkedUploadList(value: unknown): string[] {
   return Array.isArray(value) ? value.map((item) => String(item)).filter(Boolean) : [];
 }
 
-function buildFinalSubmitBlockers(input: {
+function buildOmgFinalSubmitBlockers(input: {
   mergedData: Record<string, unknown>;
   assets: IntakeAsset[];
 }): string[] {
@@ -194,6 +197,50 @@ function buildFinalSubmitBlockers(input: {
   return blockers;
 }
 
+function buildCommercialFinalSubmitBlockers(input: {
+  mergedData: Record<string, unknown>;
+  session: IntakeSession;
+}): string[] {
+  const blockers: string[] = [];
+  const titleUploads = asLinkedUploadList(input.mergedData.c6_71_title_search);
+  if (titleUploads.length === 0) {
+    blockers.push("Upload title search (Documents & Practical).");
+  }
+
+  const tenancy = String(input.mergedData.c1_4_occupancy_status ?? "");
+  if (tenancy === "Tenanted" || tenancy === "Partially occupied") {
+    const leaseUploads = asLinkedUploadList(input.mergedData.c6_72_lease_docs);
+    if (leaseUploads.length === 0) {
+      blockers.push("Upload lease documents for tenanted assets (Documents & Practical).");
+    }
+  }
+
+  const photoUploads = asLinkedUploadList(input.mergedData.c6_77_professional_photos);
+  if (photoUploads.length < 3) {
+    blockers.push("Upload at least 3 professional property photos (Documents & Practical).");
+  }
+  if (photoUploads.length > 20) {
+    blockers.push("Photo uploads are capped at 20 files for commercial intake.");
+  }
+
+  if (input.session.totalSteps < 6) {
+    blockers.push("Session is not configured with the full 6-phase commercial template.");
+  }
+
+  return blockers;
+}
+
+function buildFinalSubmitBlockers(input: {
+  mergedData: Record<string, unknown>;
+  assets: IntakeAsset[];
+  session: IntakeSession;
+}): string[] {
+  if ((input.session.intakeTemplate ?? DEFAULT_INTAKE_TEMPLATE) === "COMMERCIAL_V1") {
+    return buildCommercialFinalSubmitBlockers(input);
+  }
+  return buildOmgFinalSubmitBlockers(input);
+}
+
 async function resolveScope(input: { brokerageSlug: string; signedCookieValue?: string }): Promise<{
   brokerageId: string;
   clientId: string;
@@ -212,7 +259,7 @@ export async function getIntakeSessionView(input: {
   session: IntakeSession;
   steps: ReturnType<typeof getStepsForSession>;
   assets: IntakeAsset[];
-  definitions: typeof INTAKE_STEP_DEFINITIONS;
+  definitions: IntakeStepDefinition[];
   brokerage: {
     slug: string;
     name: string;
@@ -244,12 +291,13 @@ export async function getIntakeSessionView(input: {
 
     const steps = await getStepsForSessionFromSupabase(session.id);
     const assets = await listIntakeAssetsForSessionFromSupabase(session.id);
+    const definitions = getIntakeStepDefinitions(session.intakeTemplate);
 
     return {
       session,
       steps,
       assets,
-      definitions: INTAKE_STEP_DEFINITIONS,
+      definitions,
       brokerage: {
         slug: brokerage.slug,
         name: brokerage.name,
@@ -268,12 +316,13 @@ export async function getIntakeSessionView(input: {
   const client = getClientById(scope.clientId);
   const brokerage = getBrokerageById(scope.brokerageId);
   const db = getDb();
+  const definitions = getIntakeStepDefinitions(session.intakeTemplate);
 
   return {
     session,
     steps: getStepsForSession(session.id),
     assets: db.intake_assets.filter((asset) => asset.sessionId === session.id),
-    definitions: INTAKE_STEP_DEFINITIONS,
+    definitions,
     brokerage: {
       slug: brokerage.slug,
       name: brokerage.name,
@@ -304,7 +353,9 @@ export async function saveIntakeStep(input: {
     throw new Error("Session not found");
   }
 
-  const errors = input.markComplete ? validateRequired(input.stepKey, input.data) : [];
+  const intakeTemplate = (session.intakeTemplate ?? DEFAULT_INTAKE_TEMPLATE) as IntakeTemplateKey;
+  const definitions = getIntakeStepDefinitions(intakeTemplate);
+  const errors = input.markComplete ? validateRequired(input.stepKey, input.data, definitions) : [];
   if (errors.length > 0) {
     return { ok: false, errors };
   }
@@ -521,7 +572,7 @@ export async function submitFinal(input: {
     ? await listIntakeAssetsForSessionFromSupabase(session.id)
     : getDb().intake_assets.filter((asset) => asset.sessionId === session.id);
   const mergedData = steps.reduce<Record<string, unknown>>((acc, step) => ({ ...acc, ...step.data }), {});
-  const blockers = buildFinalSubmitBlockers({ mergedData, assets });
+  const blockers = buildFinalSubmitBlockers({ mergedData, assets, session });
   if (blockers.length > 0) {
     throw new Error(`Before final submit, please complete: ${blockers.join(" ")}`);
   }

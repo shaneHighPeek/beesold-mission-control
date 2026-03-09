@@ -15,6 +15,8 @@ export type JobKind = "KLOR_RUN" | "COUNCIL_RUN";
 
 export type IntakeActor = "SYSTEM" | "OPERATOR" | "CLIENT";
 export type BrokeragePortalTone = "corporate" | "premium_advisory";
+export type DomainVerificationStatus = "NOT_CONFIGURED" | "PENDING" | "VERIFIED" | "FAILED";
+export type IntakeTemplateKey = "OMG_V1" | "COMMERCIAL_V1";
 
 export interface BrokerageBranding {
   logoUrl?: string;
@@ -32,8 +34,15 @@ export interface Brokerage {
   shortName?: string;
   senderName: string;
   senderEmail: string;
+  senderDomain?: string;
+  senderDomainStatus: DomainVerificationStatus;
+  senderDomainVerifiedAt?: string;
   portalBaseUrl: string;
   driveParentFolderId?: string;
+  customDomain?: string;
+  domainStatus: DomainVerificationStatus;
+  domainVerificationToken?: string;
+  domainVerifiedAt?: string;
   isArchived: boolean;
   archivedAt?: string;
   branding: BrokerageBranding;
@@ -62,6 +71,7 @@ export interface IntakeSession {
   id: string;
   clientId: string;
   brokerageId: string;
+  intakeTemplate: IntakeTemplateKey;
   status: IntakeLifecycleState;
   currentStep: number;
   totalSteps: number;

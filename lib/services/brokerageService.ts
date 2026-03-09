@@ -1,16 +1,20 @@
 import { isPostgresDriver } from "@/lib/persistence/driver";
 import {
   createBrokerage as createBrokerageMock,
+  getBrokerageByCustomDomain as getBrokerageByCustomDomainMock,
   getBrokerageBySlug as getBrokerageBySlugMock,
   listBrokerages as listBrokeragesMock,
   updateBrokerage as updateBrokerageMock,
 } from "@/lib/persistence/mockDb";
 import {
   createBrokerageInSupabase,
+  getBrokerageByCustomDomainFromSupabase,
   getBrokerageBySlugFromSupabase,
   listBrokeragesFromSupabase,
   updateBrokerageInSupabase,
 } from "@/lib/persistence/supabaseRest";
+import type { Brokerage } from "@/lib/domain/types";
+import { createHash, randomBytes } from "crypto";
 
 function withLogoVersion(url: string | undefined, updatedAt: string): string | undefined {
   if (!url) return undefined;
@@ -34,7 +38,14 @@ export async function getBrokerageTheme(slug: string) {
     shortName: brokerage.shortName,
     senderName: brokerage.senderName,
     senderEmail: brokerage.senderEmail,
+    senderDomain: brokerage.senderDomain,
+    senderDomainStatus: brokerage.senderDomainStatus,
+    senderDomainVerifiedAt: brokerage.senderDomainVerifiedAt,
     portalBaseUrl: brokerage.portalBaseUrl,
+    customDomain: brokerage.customDomain,
+    domainStatus: brokerage.domainStatus,
+    domainVerificationToken: brokerage.domainVerificationToken,
+    domainVerifiedAt: brokerage.domainVerifiedAt,
     driveParentFolderId: brokerage.driveParentFolderId,
     branding: {
       ...brokerage.branding,
@@ -56,7 +67,14 @@ export async function listBrokerageOptions(options?: { includeArchived?: boolean
     shortName: item.shortName,
     senderName: item.senderName,
     senderEmail: item.senderEmail,
+    senderDomain: item.senderDomain,
+    senderDomainStatus: item.senderDomainStatus,
+    senderDomainVerifiedAt: item.senderDomainVerifiedAt,
     portalBaseUrl: item.portalBaseUrl,
+    customDomain: item.customDomain,
+    domainStatus: item.domainStatus,
+    domainVerificationToken: item.domainVerificationToken,
+    domainVerifiedAt: item.domainVerifiedAt,
     driveParentFolderId: item.driveParentFolderId,
     isArchived: item.isArchived,
     archivedAt: item.archivedAt,
@@ -73,7 +91,14 @@ export async function updateBrokerageSettings(input: {
   shortName?: string;
   senderName?: string;
   senderEmail?: string;
+  senderDomain?: string;
+  senderDomainStatus?: Brokerage["senderDomainStatus"];
+  senderDomainVerifiedAt?: string;
   portalBaseUrl?: string;
+  customDomain?: string;
+  domainStatus?: Brokerage["domainStatus"];
+  domainVerificationToken?: string;
+  domainVerifiedAt?: string;
   driveParentFolderId?: string;
   isArchived?: boolean;
   branding?: {
@@ -94,7 +119,14 @@ export async function createBrokerageSettings(input: {
   shortName?: string;
   senderName: string;
   senderEmail: string;
+  senderDomain?: string;
+  senderDomainStatus?: Brokerage["senderDomainStatus"];
+  senderDomainVerifiedAt?: string;
   portalBaseUrl: string;
+  customDomain?: string;
+  domainStatus?: Brokerage["domainStatus"];
+  domainVerificationToken?: string;
+  domainVerifiedAt?: string;
   driveParentFolderId?: string;
   isArchived?: boolean;
   branding?: {
@@ -120,4 +152,52 @@ export async function createBrokerageSettings(input: {
         ...input,
         slug: normalizedSlug,
       });
+}
+
+export function normalizeCustomDomain(raw: string): string {
+  return raw.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+}
+
+export function generateDomainVerificationToken(domain: string, brokerageId: string): string {
+  const nonce = randomBytes(8).toString("hex");
+  const digest = createHash("sha256")
+    .update(`${domain}:${brokerageId}:${nonce}`)
+    .digest("hex")
+    .slice(0, 24);
+  return `beesold-verify-${digest}`;
+}
+
+export function getDomainDnsInstructions(domain: string, token: string): {
+  verificationHost: string;
+  verificationType: "TXT";
+  verificationValue: string;
+  cnameHost: string;
+  cnameType: "CNAME";
+  cnameTarget: string;
+} {
+  const cnameTarget = process.env.BROKER_CUSTOM_DOMAIN_CNAME_TARGET ?? "cname.vercel-dns.com";
+  return {
+    verificationHost: `_beesold-verify.${domain}`,
+    verificationType: "TXT",
+    verificationValue: token,
+    cnameHost: domain,
+    cnameType: "CNAME",
+    cnameTarget,
+  };
+}
+
+export async function getBrokerageByCustomDomain(domain: string): Promise<Brokerage | null> {
+  const normalized = normalizeCustomDomain(domain);
+  return isPostgresDriver()
+    ? getBrokerageByCustomDomainFromSupabase(normalized)
+    : getBrokerageByCustomDomainMock(normalized) ?? null;
+}
+
+export async function resolveBrokerageSlugFromHost(host: string): Promise<string | null> {
+  const normalized = normalizeCustomDomain(host.split(":")[0] ?? host);
+  if (!normalized) return null;
+  const brokerage = await getBrokerageByCustomDomain(normalized);
+  if (!brokerage) return null;
+  if (brokerage.domainStatus !== "VERIFIED") return null;
+  return brokerage.slug;
 }

@@ -14,6 +14,7 @@ export async function POST(request: Request) {
       phone?: string;
       assignedOwner?: string;
       triggerInvite?: boolean;
+      intakeTemplate?: "OMG_V1" | "COMMERCIAL_V1";
     };
 
     const businessName = body.businessName?.trim() ?? "";
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
       assignedOwner: body.assignedOwner?.trim() || auth.identity.email,
       triggerInvite: body.triggerInvite ?? true,
       source: "BROKER",
+      intakeTemplate: body.intakeTemplate,
     });
 
     return ok(data);

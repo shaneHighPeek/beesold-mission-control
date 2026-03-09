@@ -72,6 +72,36 @@ alter table client_identities
   add column if not exists archived_at timestamptz;
 ```
 
+If your project was created before custom-domain support, run this migration:
+
+```sql
+alter table brokerages
+  add column if not exists custom_domain text unique,
+  add column if not exists domain_status text not null default 'NOT_CONFIGURED',
+  add column if not exists domain_verification_token text,
+  add column if not exists domain_verified_at timestamptz;
+
+create unique index if not exists idx_brokerages_custom_domain
+  on brokerages(custom_domain)
+  where custom_domain is not null;
+```
+
+If your project was created before sender-domain verification support, run this migration:
+
+```sql
+alter table brokerages
+  add column if not exists sender_domain text,
+  add column if not exists sender_domain_status text not null default 'NOT_CONFIGURED',
+  add column if not exists sender_domain_verified_at timestamptz;
+```
+
+If your project was created before intake template support, run this migration:
+
+```sql
+alter table intake_sessions
+  add column if not exists intake_template text not null default 'OMG_V1';
+```
+
 ## Step 3: Seed Brokerage (10 min)
 
 Run this SQL in Supabase SQL editor:

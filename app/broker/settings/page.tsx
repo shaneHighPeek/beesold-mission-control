@@ -11,7 +11,14 @@ type BrokerageTheme = {
   shortName?: string;
   senderName: string;
   senderEmail: string;
+  senderDomain?: string;
+  senderDomainStatus: "NOT_CONFIGURED" | "PENDING" | "VERIFIED" | "FAILED";
+  senderDomainVerifiedAt?: string;
   portalBaseUrl: string;
+  customDomain?: string;
+  domainStatus: "NOT_CONFIGURED" | "PENDING" | "VERIFIED" | "FAILED";
+  domainVerificationToken?: string;
+  domainVerifiedAt?: string;
   branding: {
     logoUrl?: string;
     primaryColor: string;
@@ -23,6 +30,7 @@ type BrokerageTheme = {
 export default function BrokerSettingsPage() {
   const [brokerage, setBrokerage] = useState<BrokerageTheme | null>(null);
   const [saving, setSaving] = useState(false);
+  const [domainBusy, setDomainBusy] = useState(false);
   const [form, setForm] = useState({
     name: "",
     shortName: "",
@@ -34,6 +42,31 @@ export default function BrokerSettingsPage() {
     secondaryColor: "#d4932e",
     legalFooter: "",
   });
+  const [domainInput, setDomainInput] = useState("");
+  const [dnsInstructions, setDnsInstructions] = useState<{
+    verificationHost: string;
+    verificationType: "TXT";
+    verificationValue: string;
+    cnameHost: string;
+    cnameType: "CNAME";
+    cnameTarget: string;
+  } | null>(null);
+  const [emailInstructions, setEmailInstructions] = useState<{
+    provider: "postmark" | "sendgrid" | "stub";
+    spf: { host: string; type: "TXT"; value: string };
+    dmarc: { host: string; type: "TXT"; value: string };
+    dkim: Array<{ host: string; type: "CNAME/TXT"; valueHint: string }>;
+  } | null>(null);
+  const [emailChecks, setEmailChecks] = useState<{
+    spfVerified: boolean;
+    dmarcVerified: boolean;
+    dkimVerified: boolean;
+  } | null>(null);
+  const [domainChecks, setDomainChecks] = useState<{
+    txtVerified: boolean;
+    cnameVerified: boolean;
+    tlsReachable: boolean;
+  } | null>(null);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -71,6 +104,7 @@ export default function BrokerSettingsPage() {
         }
         const item = payload.data.brokerage;
         setBrokerage(item);
+        setDomainInput(item.customDomain ?? "");
         setForm({
           name: item.name,
           shortName: item.shortName ?? "",
@@ -85,6 +119,28 @@ export default function BrokerSettingsPage() {
       })
       .catch(() => setMessage("Unable to load brokerage settings."));
   }, []);
+
+  useEffect(() => {
+    if (!brokerage) return;
+    fetch("/api/broker/brokerage/email-domain", { cache: "no-store" })
+      .then((response) => response.json() as Promise<{
+        ok: boolean;
+        data?: {
+          instructions: {
+            provider: "postmark" | "sendgrid" | "stub";
+            spf: { host: string; type: "TXT"; value: string };
+            dmarc: { host: string; type: "TXT"; value: string };
+            dkim: Array<{ host: string; type: "CNAME/TXT"; valueHint: string }>;
+          };
+        };
+      }>)
+      .then((payload) => {
+        if (payload.ok && payload.data) {
+          setEmailInstructions(payload.data.instructions);
+        }
+      })
+      .catch(() => {});
+  }, [brokerage?.id, brokerage?.senderEmail]);
 
   async function signOut() {
     await fetch("/api/broker-auth/sign-out", { method: "POST" });
@@ -129,6 +185,156 @@ export default function BrokerSettingsPage() {
     }
   }
 
+  async function configureDomain() {
+    if (!brokerage) return;
+    setDomainBusy(true);
+    setMessage("");
+    setDomainChecks(null);
+    try {
+      const response = await fetch("/api/broker/brokerage/domain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customDomain: domainInput }),
+      });
+      const payload = (await response.json()) as {
+        ok: boolean;
+        data?: {
+          brokerage: BrokerageTheme;
+          dns: {
+            verificationHost: string;
+            verificationType: "TXT";
+            verificationValue: string;
+            cnameHost: string;
+            cnameType: "CNAME";
+            cnameTarget: string;
+          };
+        };
+        error?: string;
+      };
+      if (!payload.ok || !payload.data) {
+        setMessage(payload.error ?? "Unable to configure custom domain.");
+        return;
+      }
+      setBrokerage(payload.data.brokerage);
+      setDnsInstructions(payload.data.dns);
+      setMessage("Custom domain configured. Add DNS records, then click Verify DNS.");
+    } finally {
+      setDomainBusy(false);
+    }
+  }
+
+  async function verifyDomain() {
+    if (!brokerage) return;
+    setDomainBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/broker/brokerage/domain/verify", {
+        method: "POST",
+      });
+      const payload = (await response.json()) as {
+        ok: boolean;
+        data?: {
+          brokerage: BrokerageTheme;
+          checks: {
+            txtVerified: boolean;
+            cnameVerified: boolean;
+            tlsReachable: boolean;
+          };
+          dns: {
+            verificationHost: string;
+            verificationType: "TXT";
+            verificationValue: string;
+            cnameHost: string;
+            cnameType: "CNAME";
+            cnameTarget: string;
+          };
+        };
+        error?: string;
+      };
+      if (!payload.ok || !payload.data) {
+        setMessage(payload.error ?? "Unable to verify DNS records.");
+        return;
+      }
+      setBrokerage(payload.data.brokerage);
+      setDnsInstructions(payload.data.dns);
+      setDomainChecks(payload.data.checks);
+      setMessage(
+        payload.data.brokerage.domainStatus === "VERIFIED"
+          ? "Domain verified successfully."
+          : "Domain verification failed. Check DNS records and retry.",
+      );
+    } finally {
+      setDomainBusy(false);
+    }
+  }
+
+  async function clearDomain() {
+    if (!brokerage) return;
+    setDomainBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/broker/brokerage/domain", {
+        method: "DELETE",
+      });
+      const payload = (await response.json()) as {
+        ok: boolean;
+        data?: {
+          brokerage: BrokerageTheme;
+        };
+        error?: string;
+      };
+      if (!payload.ok || !payload.data) {
+        setMessage(payload.error ?? "Unable to clear custom domain.");
+        return;
+      }
+      setBrokerage(payload.data.brokerage);
+      setDomainInput("");
+      setDnsInstructions(null);
+      setDomainChecks(null);
+      setMessage("Custom domain cleared.");
+    } finally {
+      setDomainBusy(false);
+    }
+  }
+
+  async function verifyEmailDomain() {
+    if (!brokerage) return;
+    setDomainBusy(true);
+    setMessage("");
+    setEmailChecks(null);
+    try {
+      const response = await fetch("/api/broker/brokerage/email-domain/verify", { method: "POST" });
+      const payload = (await response.json()) as {
+        ok: boolean;
+        data?: {
+          brokerage: BrokerageTheme;
+          checks: { spfVerified: boolean; dmarcVerified: boolean; dkimVerified: boolean };
+          instructions: {
+            provider: "postmark" | "sendgrid" | "stub";
+            spf: { host: string; type: "TXT"; value: string };
+            dmarc: { host: string; type: "TXT"; value: string };
+            dkim: Array<{ host: string; type: "CNAME/TXT"; valueHint: string }>;
+          };
+        };
+        error?: string;
+      };
+      if (!payload.ok || !payload.data) {
+        setMessage(payload.error ?? "Unable to verify sender domain.");
+        return;
+      }
+      setBrokerage(payload.data.brokerage);
+      setEmailChecks(payload.data.checks);
+      setEmailInstructions(payload.data.instructions);
+      setMessage(
+        payload.data.brokerage.senderDomainStatus === "VERIFIED"
+          ? "Sender domain verified."
+          : "Sender domain verification failed. Review SPF/DKIM/DMARC records.",
+      );
+    } finally {
+      setDomainBusy(false);
+    }
+  }
+
   return (
     <main style={{ minHeight: "100vh", padding: "1rem" }}>
       <section className="card" style={{ marginBottom: "1rem" }}>
@@ -147,6 +353,128 @@ export default function BrokerSettingsPage() {
           </div>
         </div>
         {message ? <p className="error">{message}</p> : null}
+      </section>
+
+      <section className="card" style={{ marginBottom: "1rem" }}>
+        <h3 style={{ marginBottom: "0.5rem" }}>Branded Email Domain</h3>
+        <p className="small" style={{ marginBottom: "0.65rem" }}>
+          Verify your sender domain DNS records (SPF, DKIM, DMARC) so invites send from your branded email domain.
+        </p>
+        <div style={{ display: "grid", gap: "0.5rem", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
+          <label className="field">
+            <span>Sender Email</span>
+            <input value={form.senderEmail} readOnly />
+          </label>
+          <label className="field">
+            <span>Sender Domain</span>
+            <input value={brokerage?.senderDomain ?? ""} readOnly />
+          </label>
+          <label className="field">
+            <span>Verification Status</span>
+            <input value={brokerage?.senderDomainStatus ?? "NOT_CONFIGURED"} readOnly />
+          </label>
+          <label className="field">
+            <span>Verified At</span>
+            <input value={brokerage?.senderDomainVerifiedAt ?? ""} readOnly />
+          </label>
+        </div>
+        <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <button className="secondary" type="button" onClick={verifyEmailDomain} disabled={domainBusy || !brokerage}>
+            Verify Sender DNS
+          </button>
+        </div>
+        {emailInstructions ? (
+          <div style={{ marginTop: "0.75rem", display: "grid", gap: "0.5rem" }}>
+            <p className="small">
+              Provider: <strong>{emailInstructions.provider}</strong>. Configure these DNS records in your DNS provider.
+            </p>
+            <div className="card" style={{ borderRadius: 12 }}>
+              <p className="small"><strong>{emailInstructions.spf.type}</strong> {emailInstructions.spf.host}</p>
+              <p className="small">{emailInstructions.spf.value}</p>
+            </div>
+            <div className="card" style={{ borderRadius: 12 }}>
+              <p className="small"><strong>{emailInstructions.dmarc.type}</strong> {emailInstructions.dmarc.host}</p>
+              <p className="small">{emailInstructions.dmarc.value}</p>
+            </div>
+            {emailInstructions.dkim.map((record) => (
+              <div key={record.host} className="card" style={{ borderRadius: 12 }}>
+                <p className="small"><strong>{record.type}</strong> {record.host}</p>
+                <p className="small">{record.valueHint}</p>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {emailChecks ? (
+          <div style={{ marginTop: "0.75rem", display: "grid", gap: "0.25rem" }}>
+            <p className="small">SPF: {emailChecks.spfVerified ? "PASS" : "FAIL"}</p>
+            <p className="small">DMARC: {emailChecks.dmarcVerified ? "PASS" : "FAIL"}</p>
+            <p className="small">DKIM: {emailChecks.dkimVerified ? "PASS" : "FAIL"}</p>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="card" style={{ marginBottom: "1rem" }}>
+        <h3 style={{ marginBottom: "0.5rem" }}>Custom Domain and DNS</h3>
+        <p className="small" style={{ marginBottom: "0.65rem" }}>
+          Configure your white-label domain (for example `portal.yourbrokerage.com`) and verify DNS ownership.
+        </p>
+        <div style={{ display: "grid", gap: "0.5rem", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
+          <label className="field">
+            <span>Custom Domain</span>
+            <input value={domainInput} onChange={(event) => setDomainInput(event.target.value)} placeholder="portal.example.com" />
+          </label>
+          <label className="field">
+            <span>Status</span>
+            <input value={brokerage?.domainStatus ?? "NOT_CONFIGURED"} readOnly />
+          </label>
+          <label className="field">
+            <span>Verified At</span>
+            <input value={brokerage?.domainVerifiedAt ?? ""} readOnly />
+          </label>
+        </div>
+        <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <button
+            className="primary"
+            type="button"
+            onClick={configureDomain}
+            disabled={domainBusy || !domainInput.trim()}
+          >
+            {domainBusy ? "Working..." : "Save Domain"}
+          </button>
+          <button className="secondary" type="button" onClick={verifyDomain} disabled={domainBusy || !brokerage?.customDomain}>
+            Verify DNS
+          </button>
+          <button className="secondary" type="button" onClick={clearDomain} disabled={domainBusy || !brokerage?.customDomain}>
+            Clear Domain
+          </button>
+          {brokerage?.customDomain && brokerage.domainStatus === "VERIFIED" ? (
+            <a className="secondary" href={`https://${brokerage.customDomain}`} target="_blank" rel="noreferrer">
+              Open Custom Domain
+            </a>
+          ) : null}
+        </div>
+        {dnsInstructions ? (
+          <div style={{ marginTop: "0.75rem", display: "grid", gap: "0.5rem" }}>
+            <p className="small">
+              Add these DNS records at your DNS provider, wait for propagation, then click <strong>Verify DNS</strong>.
+            </p>
+            <div className="card" style={{ borderRadius: 12 }}>
+              <p className="small"><strong>{dnsInstructions.verificationType}</strong> {dnsInstructions.verificationHost}</p>
+              <p className="small">{dnsInstructions.verificationValue}</p>
+            </div>
+            <div className="card" style={{ borderRadius: 12 }}>
+              <p className="small"><strong>{dnsInstructions.cnameType}</strong> {dnsInstructions.cnameHost}</p>
+              <p className="small">{dnsInstructions.cnameTarget}</p>
+            </div>
+          </div>
+        ) : null}
+        {domainChecks ? (
+          <div style={{ marginTop: "0.75rem", display: "grid", gap: "0.25rem" }}>
+            <p className="small">TXT verification: {domainChecks.txtVerified ? "PASS" : "FAIL"}</p>
+            <p className="small">CNAME verification: {domainChecks.cnameVerified ? "PASS" : "FAIL"}</p>
+            <p className="small">TLS reachable: {domainChecks.tlsReachable ? "PASS" : "FAIL"}</p>
+          </div>
+        ) : null}
       </section>
 
       <section className="card" style={{ marginBottom: "1rem" }}>

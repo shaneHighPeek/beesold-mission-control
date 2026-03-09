@@ -26,12 +26,14 @@ export async function POST(request: Request) {
       phone?: string;
       assignedOwner?: string;
       triggerInvite?: boolean;
+      intakeTemplate?: "OMG_V1" | "COMMERCIAL_V1";
     };
 
     const data = await createOrUpdateClientOnboarding({
       ...body,
       source: "ADMIN",
       triggerInvite: body.triggerInvite ?? true,
+      intakeTemplate: body.intakeTemplate,
     });
 
     return ok(data);

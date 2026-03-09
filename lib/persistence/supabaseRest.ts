@@ -1,4 +1,8 @@
-import { INTAKE_STEP_DEFINITIONS } from "@/lib/domain/intakeConfig";
+import {
+  DEFAULT_INTAKE_TEMPLATE,
+  getIntakeStepDefinitions,
+  type IntakeTemplateKey,
+} from "@/lib/domain/intakeConfig";
 import { assertTransition } from "@/lib/domain/stateMachine";
 import type {
   AuditLog,
@@ -30,7 +34,14 @@ type BrokerageRow = {
   short_name: string | null;
   sender_name: string;
   sender_email: string;
+  sender_domain: string | null;
+  sender_domain_status: "NOT_CONFIGURED" | "PENDING" | "VERIFIED" | "FAILED";
+  sender_domain_verified_at: string | null;
   portal_base_url: string;
+  custom_domain: string | null;
+  domain_status: "NOT_CONFIGURED" | "PENDING" | "VERIFIED" | "FAILED";
+  domain_verification_token: string | null;
+  domain_verified_at: string | null;
   drive_parent_folder_id: string | null;
   logo_url: string | null;
   primary_color: string;
@@ -65,6 +76,7 @@ type IntakeSessionRow = {
   id: string;
   client_id: string;
   brokerage_id: string;
+  intake_template?: IntakeTemplateKey | null;
   status: IntakeLifecycleState;
   current_step: number;
   total_steps: number;
@@ -239,7 +251,14 @@ function mapBrokerage(row: BrokerageRow): Brokerage {
     shortName: row.short_name ?? undefined,
     senderName: row.sender_name,
     senderEmail: row.sender_email,
+    senderDomain: row.sender_domain ?? undefined,
+    senderDomainStatus: row.sender_domain_status ?? "NOT_CONFIGURED",
+    senderDomainVerifiedAt: row.sender_domain_verified_at ?? undefined,
     portalBaseUrl: row.portal_base_url,
+    customDomain: row.custom_domain ?? undefined,
+    domainStatus: row.domain_status ?? "NOT_CONFIGURED",
+    domainVerificationToken: row.domain_verification_token ?? undefined,
+    domainVerifiedAt: row.domain_verified_at ?? undefined,
     driveParentFolderId: row.drive_parent_folder_id ?? undefined,
     isArchived: row.is_archived ?? false,
     archivedAt: row.archived_at ?? undefined,
@@ -280,6 +299,7 @@ function mapSession(row: IntakeSessionRow): IntakeSession {
     id: row.id,
     clientId: row.client_id,
     brokerageId: row.brokerage_id,
+    intakeTemplate: row.intake_template ?? DEFAULT_INTAKE_TEMPLATE,
     status: row.status,
     currentStep: row.current_step,
     totalSteps: row.total_steps,
@@ -407,13 +427,36 @@ export async function getBrokerageBySlugFromSupabase(slug: string): Promise<Brok
   return rows.length > 0 ? mapBrokerage(rows[0]) : null;
 }
 
+export async function getBrokerageByCustomDomainFromSupabase(customDomain: string): Promise<Brokerage | null> {
+  try {
+    const rows = await request<BrokerageRow[]>(
+      `brokerages?select=*&custom_domain=eq.${encodeURIComponent(customDomain.toLowerCase())}&limit=1`,
+      { method: "GET" },
+    );
+    return rows.length > 0 ? mapBrokerage(rows[0]) : null;
+  } catch (error) {
+    const message = (error as Error).message.toLowerCase();
+    if (message.includes("custom_domain") || message.includes("domain_status")) {
+      return null;
+    }
+    throw error;
+  }
+}
+
 export async function updateBrokerageInSupabase(input: {
   brokerageId: string;
   name?: string;
   shortName?: string;
   senderName?: string;
   senderEmail?: string;
+  senderDomain?: string;
+  senderDomainStatus?: Brokerage["senderDomainStatus"];
+  senderDomainVerifiedAt?: string;
   portalBaseUrl?: string;
+  customDomain?: string;
+  domainStatus?: Brokerage["domainStatus"];
+  domainVerificationToken?: string;
+  domainVerifiedAt?: string;
   driveParentFolderId?: string;
   isArchived?: boolean;
   branding?: {
@@ -431,7 +474,14 @@ export async function updateBrokerageInSupabase(input: {
   if (input.shortName !== undefined) patch.short_name = input.shortName || null;
   if (input.senderName !== undefined) patch.sender_name = input.senderName;
   if (input.senderEmail !== undefined) patch.sender_email = input.senderEmail;
+  if (input.senderDomain !== undefined) patch.sender_domain = input.senderDomain || null;
+  if (input.senderDomainStatus !== undefined) patch.sender_domain_status = input.senderDomainStatus;
+  if (input.senderDomainVerifiedAt !== undefined) patch.sender_domain_verified_at = input.senderDomainVerifiedAt || null;
   if (input.portalBaseUrl !== undefined) patch.portal_base_url = input.portalBaseUrl;
+  if (input.customDomain !== undefined) patch.custom_domain = input.customDomain || null;
+  if (input.domainStatus !== undefined) patch.domain_status = input.domainStatus;
+  if (input.domainVerificationToken !== undefined) patch.domain_verification_token = input.domainVerificationToken || null;
+  if (input.domainVerifiedAt !== undefined) patch.domain_verified_at = input.domainVerifiedAt || null;
   if (input.driveParentFolderId !== undefined) patch.drive_parent_folder_id = input.driveParentFolderId || null;
   if (input.isArchived !== undefined) {
     patch.is_archived = input.isArchived;
@@ -475,7 +525,14 @@ export async function createBrokerageInSupabase(input: {
   shortName?: string;
   senderName: string;
   senderEmail: string;
+  senderDomain?: string;
+  senderDomainStatus?: Brokerage["senderDomainStatus"];
+  senderDomainVerifiedAt?: string;
   portalBaseUrl: string;
+  customDomain?: string;
+  domainStatus?: Brokerage["domainStatus"];
+  domainVerificationToken?: string;
+  domainVerifiedAt?: string;
   driveParentFolderId?: string;
   isArchived?: boolean;
   branding?: {
@@ -496,7 +553,14 @@ export async function createBrokerageInSupabase(input: {
       short_name: input.shortName ?? null,
       sender_name: input.senderName,
       sender_email: input.senderEmail,
+      sender_domain: input.senderDomain ?? null,
+      sender_domain_status: input.senderDomainStatus ?? "NOT_CONFIGURED",
+      sender_domain_verified_at: input.senderDomainVerifiedAt ?? null,
       portal_base_url: input.portalBaseUrl,
+      custom_domain: input.customDomain ?? null,
+      domain_status: input.domainStatus ?? "NOT_CONFIGURED",
+      domain_verification_token: input.domainVerificationToken ?? null,
+      domain_verified_at: input.domainVerifiedAt ?? null,
       drive_parent_folder_id: input.driveParentFolderId ?? null,
       is_archived: input.isArchived ?? false,
       archived_at: input.isArchived ? new Date().toISOString() : null,
@@ -638,6 +702,7 @@ export async function getActiveSessionByClientFromSupabase(clientId: string): Pr
 export async function createIntakeSessionForClientInSupabase(
   clientId: string,
   brokerageId: string,
+  intakeTemplate: IntakeTemplateKey = DEFAULT_INTAKE_TEMPLATE,
 ): Promise<IntakeSession> {
   const existing = await getActiveSessionByClientFromSupabase(clientId);
   if (existing) return existing;
@@ -648,9 +713,10 @@ export async function createIntakeSessionForClientInSupabase(
     body: JSON.stringify({
       client_id: clientId,
       brokerage_id: brokerageId,
+      intake_template: intakeTemplate,
       status: "INVITED",
       current_step: 1,
-      total_steps: INTAKE_STEP_DEFINITIONS.length,
+      total_steps: getIntakeStepDefinitions(intakeTemplate).length,
       completion_pct: 0,
       missing_items: [],
     }),
@@ -661,7 +727,7 @@ export async function createIntakeSessionForClientInSupabase(
     method: "POST",
     headers: { Prefer: "return=representation" },
     body: JSON.stringify(
-      INTAKE_STEP_DEFINITIONS.map((step, index) => ({
+      getIntakeStepDefinitions(intakeTemplate).map((step, index) => ({
         session_id: session.id,
         step_key: step.key,
         title: step.title,

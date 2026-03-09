@@ -15,6 +15,30 @@ type DeliveryResult = {
   providerMessageId?: string;
 };
 
+function resolveSenderIdentity(brokerage: Brokerage): { fromName: string; fromEmail: string; fallbackUsed: boolean } {
+  const requireVerified = process.env.REQUIRE_VERIFIED_SENDER_DOMAIN === "true";
+  if (!requireVerified || brokerage.senderDomainStatus === "VERIFIED") {
+    return {
+      fromName: brokerage.senderName,
+      fromEmail: brokerage.senderEmail,
+      fallbackUsed: false,
+    };
+  }
+  const fallbackEmail = process.env.EMAIL_FALLBACK_FROM_EMAIL;
+  if (!fallbackEmail) {
+    return {
+      fromName: brokerage.senderName,
+      fromEmail: brokerage.senderEmail,
+      fallbackUsed: false,
+    };
+  }
+  return {
+    fromName: `${brokerage.senderName} via BeeSold`,
+    fromEmail: fallbackEmail,
+    fallbackUsed: true,
+  };
+}
+
 function renderWelcomeEmail(input: {
   brokerage: Brokerage;
   client: ClientIdentity;
@@ -169,6 +193,7 @@ export async function sendWelcomeEmail(input: {
   session: IntakeSession;
   magicLinkUrl: string;
 }): Promise<OutboundEmail> {
+  const sender = resolveSenderIdentity(input.brokerage);
   const content = renderWelcomeEmail({
     brokerage: input.brokerage,
     client: input.client,
@@ -180,8 +205,8 @@ export async function sendWelcomeEmail(input: {
         brokerageId: input.brokerage.id,
         sessionId: input.session.id,
         to: input.client.email,
-        fromName: input.brokerage.senderName,
-        fromEmail: input.brokerage.senderEmail,
+        fromName: sender.fromName,
+        fromEmail: sender.fromEmail,
         subject: content.subject,
         html: content.html,
         providerStatus: "QUEUED",
@@ -190,8 +215,8 @@ export async function sendWelcomeEmail(input: {
         brokerageId: input.brokerage.id,
         sessionId: input.session.id,
         to: input.client.email,
-        fromName: input.brokerage.senderName,
-        fromEmail: input.brokerage.senderEmail,
+        fromName: sender.fromName,
+        fromEmail: sender.fromEmail,
         subject: content.subject,
         html: content.html,
         providerStatus: "QUEUED",
@@ -199,8 +224,8 @@ export async function sendWelcomeEmail(input: {
 
   try {
     const delivery = await dispatchWelcomeEmail({
-      fromName: input.brokerage.senderName,
-      fromEmail: input.brokerage.senderEmail,
+      fromName: sender.fromName,
+      fromEmail: sender.fromEmail,
       to: input.client.email,
       subject: content.subject,
       html: content.html,
@@ -219,7 +244,9 @@ export async function sendWelcomeEmail(input: {
     if (isPostgresDriver()) {
       await addAuditLogInSupabase(input.session.id, input.brokerage.id, input.client.id, "SYSTEM", "WELCOME_EMAIL_SENT", {
         to: input.client.email,
-        from: `${input.brokerage.senderName} <${input.brokerage.senderEmail}>`,
+        from: `${sender.fromName} <${sender.fromEmail}>`,
+        senderDomainStatus: input.brokerage.senderDomainStatus,
+        senderFallbackUsed: sender.fallbackUsed,
         provider: delivery.provider,
         providerStatus: delivery.providerStatus,
         providerMessageId: delivery.providerMessageId,
@@ -227,7 +254,9 @@ export async function sendWelcomeEmail(input: {
     } else {
       addAuditLog(input.session.id, input.brokerage.id, input.client.id, "SYSTEM", "WELCOME_EMAIL_SENT", {
         to: input.client.email,
-        from: `${input.brokerage.senderName} <${input.brokerage.senderEmail}>`,
+        from: `${sender.fromName} <${sender.fromEmail}>`,
+        senderDomainStatus: input.brokerage.senderDomainStatus,
+        senderFallbackUsed: sender.fallbackUsed,
         provider: delivery.provider,
         providerStatus: delivery.providerStatus,
         providerMessageId: delivery.providerMessageId,
@@ -241,14 +270,18 @@ export async function sendWelcomeEmail(input: {
       await updateOutboundEmailDeliveryInSupabase(email.id, { providerStatus: "FAILED" });
       await addAuditLogInSupabase(input.session.id, input.brokerage.id, input.client.id, "SYSTEM", "WELCOME_EMAIL_FAILED", {
         to: input.client.email,
-        from: `${input.brokerage.senderName} <${input.brokerage.senderEmail}>`,
+        from: `${sender.fromName} <${sender.fromEmail}>`,
+        senderDomainStatus: input.brokerage.senderDomainStatus,
+        senderFallbackUsed: sender.fallbackUsed,
         error: errorMessage,
       });
     } else {
       updateOutboundEmailDelivery(email.id, { providerStatus: "FAILED" });
       addAuditLog(input.session.id, input.brokerage.id, input.client.id, "SYSTEM", "WELCOME_EMAIL_FAILED", {
         to: input.client.email,
-        from: `${input.brokerage.senderName} <${input.brokerage.senderEmail}>`,
+        from: `${sender.fromName} <${sender.fromEmail}>`,
+        senderDomainStatus: input.brokerage.senderDomainStatus,
+        senderFallbackUsed: sender.fallbackUsed,
         error: errorMessage,
       });
     }

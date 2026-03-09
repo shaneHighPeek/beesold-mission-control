@@ -28,12 +28,12 @@ This section overrides normal sequencing for this week's brokerage client demo. 
 
 | ID | Priority | Status | Workstream | Owner | Effort | Done Criteria |
 | --- | --- | --- | --- | --- | --- | --- |
-| DEMO-01 | P0 | TODO | White-label broker portal (kanban pipeline) | Frontend + Backend | M | Broker user can sign in, view only their tenant's clients in a card-based kanban by lifecycle state, and each card shows live aging timer (`time in system` + `time in current state`). |
-| DEMO-02 | P0 | TODO | Broker self-serve client entry + branded invite | Backend + Frontend | M | Broker can create a client from their portal; action triggers branded BeeSold invite and questionnaire start flow without operator intervention. |
-| DEMO-03 | P0 | TODO | Broker branding controls (mirror update brokerage) | Frontend + Backend | S | Broker can update logo, primary/secondary colors, sender display name, and legal footer from broker portal; changes propagate to intake portal + invite templates. |
-| DEMO-04 | P0 | TODO | Custom domain + DNS onboarding for white-label brokerages | DevOps + Backend | M | Brokerage can map branded portal domain (CNAME), pass ownership verification, and route traffic to tenant portal with TLS. |
-| DEMO-05 | P0 | TODO | Branded email domains per brokerage | DevOps + Backend | M | Brokerage sender domains verified (SPF/DKIM/DMARC), invites send from brokerage-branded `from` domain, and delivery status is auditable. |
-| DEMO-06 | P0 | TODO | Commercial property intake variant (new questionnaire) | Product + Frontend + Backend | M | New questionnaire variant can be selected per session/template, with separate question set + validation flow for commercial listings. |
+| DEMO-01 | P0 | DONE | White-label broker portal (kanban pipeline) | Frontend + Backend | M | Broker user can sign in, view only their tenant's clients in a card-based kanban by lifecycle state, and each card shows live aging timer (`time in system` + `time in current state`). |
+| DEMO-02 | P0 | DONE | Broker self-serve client entry + branded invite | Backend + Frontend | M | Broker can create a client from their portal; action triggers branded BeeSold invite and questionnaire start flow without operator intervention. |
+| DEMO-03 | P0 | DONE | Broker branding controls (mirror update brokerage) | Frontend + Backend | S | Broker can update logo, primary/secondary colors, sender display name, and legal footer from broker portal; changes propagate to intake portal + invite templates. |
+| DEMO-04 | P0 | IN_PROGRESS | Custom domain + DNS onboarding for white-label brokerages | DevOps + Backend | M | Brokerage can map branded portal domain (CNAME), pass ownership verification, and route traffic to tenant portal with TLS. |
+| DEMO-05 | P0 | IN_PROGRESS | Branded email domains per brokerage | DevOps + Backend | M | Brokerage sender domains verified (SPF/DKIM/DMARC), invites send from brokerage-branded `from` domain, and delivery status is auditable. |
+| DEMO-06 | P0 | DONE | Commercial property intake variant (new questionnaire) | Product + Frontend + Backend | M | New questionnaire variant can be selected per session/template, with separate question set + validation flow for commercial listings. |
 
 ### Definition of Demo Ready (This Week)
 

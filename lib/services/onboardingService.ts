@@ -26,6 +26,7 @@ import {
 import { issueMagicLinkForSession } from "@/lib/services/authService";
 import { sendWelcomeEmail } from "@/lib/services/emailService";
 import { ensureDriveFolder } from "@/lib/services/googleDriveService";
+import type { IntakeTemplateKey } from "@/lib/domain/types";
 
 export async function createOrUpdateClientOnboarding(input: {
   brokerageSlug: string;
@@ -36,6 +37,7 @@ export async function createOrUpdateClientOnboarding(input: {
   assignedOwner?: string;
   triggerInvite?: boolean;
   source: "ADMIN" | "API" | "BROKER";
+  intakeTemplate?: IntakeTemplateKey;
   idempotencyKey?: string;
 }): Promise<{
   clientId: string;
@@ -52,7 +54,11 @@ export async function createOrUpdateClientOnboarding(input: {
     if (input.source === "API" && input.idempotencyKey) {
       const existing = await findWebhookIdempotencyFromSupabase(input.idempotencyKey, brokerage.id);
       if (existing) {
-        const existingSession = await createIntakeSessionForClientInSupabase(existing.clientId, brokerage.id);
+        const existingSession = await createIntakeSessionForClientInSupabase(
+          existing.clientId,
+          brokerage.id,
+          input.intakeTemplate,
+        );
         return {
           clientId: existing.clientId,
           sessionId: existingSession.id,
@@ -70,7 +76,7 @@ export async function createOrUpdateClientOnboarding(input: {
       assignedOwner: input.assignedOwner,
     });
 
-    const session = await createIntakeSessionForClientInSupabase(client.id, brokerage.id);
+    const session = await createIntakeSessionForClientInSupabase(client.id, brokerage.id, input.intakeTemplate);
 
     await addAuditLogInSupabase(session.id, brokerage.id, client.id, "SYSTEM", "CLIENT_ONBOARDED", {
       source: input.source,
@@ -106,7 +112,7 @@ export async function createOrUpdateClientOnboarding(input: {
   if (input.source === "API" && input.idempotencyKey) {
     const existing = findWebhookIdempotency(input.idempotencyKey, brokerage.id);
     if (existing) {
-      const existingSession = createIntakeSessionForClient(existing.clientId, brokerage.id);
+      const existingSession = createIntakeSessionForClient(existing.clientId, brokerage.id, input.intakeTemplate);
       return {
         clientId: existing.clientId,
         sessionId: existingSession.id,
@@ -124,7 +130,7 @@ export async function createOrUpdateClientOnboarding(input: {
     assignedOwner: input.assignedOwner,
   });
 
-  const session = createIntakeSessionForClient(client.id, brokerage.id);
+  const session = createIntakeSessionForClient(client.id, brokerage.id, input.intakeTemplate);
 
   addAuditLog(session.id, brokerage.id, client.id, "SYSTEM", "CLIENT_ONBOARDED", {
     source: input.source,

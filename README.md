@@ -43,6 +43,11 @@ Production URL: `https://app.beesold.hpp-cloud.com`
 - `POST /api/broker-auth/sign-out`
 - `GET /api/broker/brokerage`
 - `PATCH /api/broker/brokerage`
+- `POST /api/broker/brokerage/domain`
+- `DELETE /api/broker/brokerage/domain`
+- `POST /api/broker/brokerage/domain/verify`
+- `GET /api/broker/brokerage/email-domain`
+- `POST /api/broker/brokerage/email-domain/verify`
 - `POST /api/broker/clients`
 - `GET /api/broker/pipeline`
 - `POST /api/broker/intakes/[sessionId]/resend-invite`
@@ -83,6 +88,10 @@ Production URL: `https://app.beesold.hpp-cloud.com`
 - `BROKER_SESSION_TTL_HOURS` (default `12`)
 - `BROKER_PORTAL_USERS` (optional CSV credentials; format `slug|email|password`, e.g. `off-market-group|broker@omg.com|strong-pass`)
 - `BROKER_PORTAL_PASSWORD` (fallback single password when `BROKER_PORTAL_USERS` is not set; email must match brokerage sender email)
+- `BROKER_CUSTOM_DOMAIN_CNAME_TARGET` (optional, default `cname.vercel-dns.com`; CNAME target shown in broker DNS instructions)
+- `EMAIL_DOMAIN_DKIM_SELECTORS` (optional CSV selectors for DNS verify, e.g. `pm._domainkey` or `s1._domainkey,s2._domainkey`)
+- `REQUIRE_VERIFIED_SENDER_DOMAIN` (`true` to force fallback sender until sender-domain is verified)
+- `EMAIL_FALLBACK_FROM_EMAIL` (fallback sender address when `REQUIRE_VERIFIED_SENDER_DOMAIN=true` and sender domain is not verified)
 
 ## Add a new brokerage brand
 
@@ -92,8 +101,10 @@ Production URL: `https://app.beesold.hpp-cloud.com`
 
 ## Intake schema plug-in
 
-- The form engine consumes `INTAKE_STEP_DEFINITIONS` in `lib/domain/intakeConfig.ts`.
-- Replace this constant with your complete 83-field/7-section spec without changing route/UI contracts.
+- Session templates are keyed by `intake_template` (`OMG_V1` or `COMMERCIAL_V1`).
+- Broker/API/admin onboarding can set `intakeTemplate` at client creation.
+- Template definitions are resolved by `getIntakeStepDefinitions(...)` in `lib/domain/intakeConfig.ts`.
+- Commercial 6-phase intake lives in `lib/domain/intakeCommercialConfig.ts`.
 
 ## Run
 

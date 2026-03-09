@@ -63,6 +63,7 @@ export default function BrokerPipelinePage() {
     email: "",
     phone: "",
     assignedOwner: "",
+    intakeTemplate: "OMG_V1" as "OMG_V1" | "COMMERCIAL_V1",
   });
   const [now, setNow] = useState(Date.now());
 
@@ -181,6 +182,7 @@ export default function BrokerPipelinePage() {
           email: createForm.email,
           phone: createForm.phone,
           assignedOwner: createForm.assignedOwner,
+          intakeTemplate: createForm.intakeTemplate,
           triggerInvite: true,
         }),
       });
@@ -199,6 +201,7 @@ export default function BrokerPipelinePage() {
         email: "",
         phone: "",
         assignedOwner: "",
+        intakeTemplate: createForm.intakeTemplate,
       });
       setActionMessage(
         payload.data?.inviteSent ? "Client created and invite sent." : "Client created. Invite was not sent.",
@@ -240,7 +243,7 @@ export default function BrokerPipelinePage() {
       <section className="card" style={{ marginBottom: "1rem" }}>
         <h3 style={{ marginBottom: "0.5rem" }}>Add Client</h3>
         <p className="small" style={{ marginBottom: "0.65rem" }}>
-          Creates a client in this brokerage and sends the branded invite automatically.
+          Creates a client in this brokerage, selects intake type, and sends the branded invite automatically.
         </p>
         <div style={{ display: "grid", gap: "0.5rem", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
           <label className="field">
@@ -277,6 +280,21 @@ export default function BrokerPipelinePage() {
               value={createForm.assignedOwner}
               onChange={(event) => setCreateForm((prev) => ({ ...prev, assignedOwner: event.target.value }))}
             />
+          </label>
+          <label className="field">
+            <span>Listing Type</span>
+            <select
+              value={createForm.intakeTemplate}
+              onChange={(event) =>
+                setCreateForm((prev) => ({
+                  ...prev,
+                  intakeTemplate: event.target.value as "OMG_V1" | "COMMERCIAL_V1",
+                }))
+              }
+            >
+              <option value="OMG_V1">Hospitality / Business (OMG V1)</option>
+              <option value="COMMERCIAL_V1">Commercial Property (6-phase)</option>
+            </select>
           </label>
         </div>
         <div style={{ marginTop: "0.65rem" }}>

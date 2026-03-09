@@ -22,6 +22,7 @@ export async function POST(request: Request) {
       assignedOwner?: string;
       triggerInvite?: boolean;
       idempotencyKey: string;
+      intakeTemplate?: "OMG_V1" | "COMMERCIAL_V1";
     };
 
     if (!body.idempotencyKey) {
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
       assignedOwner: body.assignedOwner,
       triggerInvite: body.triggerInvite ?? true,
       source: "API",
+      intakeTemplate: body.intakeTemplate,
       idempotencyKey: body.idempotencyKey,
     });
 

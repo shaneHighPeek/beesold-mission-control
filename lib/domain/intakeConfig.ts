@@ -1,3 +1,5 @@
+import { COMMERCIAL_INTAKE_STEP_DEFINITIONS } from "@/lib/domain/intakeCommercialConfig";
+
 export type IntakeFieldType =
   | "text"
   | "textarea"
@@ -97,6 +99,9 @@ export function isFieldVisible(field: IntakeFieldDefinition, data: Record<string
 export function isFieldRequired(field: IntakeFieldDefinition, data: Record<string, unknown>): boolean {
   return Boolean(field.required) && isFieldVisible(field, data);
 }
+
+export type IntakeTemplateKey = "OMG_V1" | "COMMERCIAL_V1";
+export const DEFAULT_INTAKE_TEMPLATE: IntakeTemplateKey = "OMG_V1";
 
 // Pluggable schema host for brokerage intake form specification.
 export const INTAKE_STEP_DEFINITIONS: IntakeStepDefinition[] = [
@@ -406,3 +411,10 @@ export const INTAKE_STEP_DEFINITIONS: IntakeStepDefinition[] = [
     ],
   },
 ];
+
+export function getIntakeStepDefinitions(template: IntakeTemplateKey | undefined): IntakeStepDefinition[] {
+  if (template === "COMMERCIAL_V1") {
+    return COMMERCIAL_INTAKE_STEP_DEFINITIONS;
+  }
+  return INTAKE_STEP_DEFINITIONS;
+}

@@ -1,4 +1,8 @@
-import { INTAKE_STEP_DEFINITIONS } from "@/lib/domain/intakeConfig";
+import {
+  DEFAULT_INTAKE_TEMPLATE,
+  getIntakeStepDefinitions,
+  type IntakeTemplateKey,
+} from "@/lib/domain/intakeConfig";
 import type {
   AuditLog,
   Brokerage,
@@ -30,7 +34,14 @@ const initialBrokerage: Brokerage = {
   shortName: "OffMarket",
   senderName: "Off Market Group",
   senderEmail: "clientservices@offmarketgroup.example",
+  senderDomain: "offmarketgroup.example",
+  senderDomainStatus: "NOT_CONFIGURED",
+  senderDomainVerifiedAt: undefined,
   portalBaseUrl: process.env.DEFAULT_PORTAL_BASE_URL ?? "http://localhost:3000",
+  customDomain: undefined,
+  domainStatus: "NOT_CONFIGURED",
+  domainVerificationToken: undefined,
+  domainVerifiedAt: undefined,
   driveParentFolderId: process.env.OMG_DRIVE_PARENT_FOLDER_ID,
   isArchived: false,
   branding: {
@@ -63,16 +74,17 @@ const seededSession: IntakeSession = {
   id: newId("session"),
   clientId: seededClient.id,
   brokerageId: initialBrokerage.id,
+  intakeTemplate: DEFAULT_INTAKE_TEMPLATE,
   status: "INVITED",
   currentStep: 1,
-  totalSteps: INTAKE_STEP_DEFINITIONS.length,
+  totalSteps: getIntakeStepDefinitions(DEFAULT_INTAKE_TEMPLATE).length,
   completionPct: 0,
   missingItems: [],
   createdAt: nowIso(),
   updatedAt: nowIso(),
 };
 
-const seededSteps = INTAKE_STEP_DEFINITIONS.map((step, index) => ({
+const seededSteps = getIntakeStepDefinitions(DEFAULT_INTAKE_TEMPLATE).map((step, index) => ({
   id: newId("step"),
   sessionId: seededSession.id,
   stepKey: step.key,
@@ -139,6 +151,11 @@ export function getBrokerageById(id: string): Brokerage {
   return brokerage;
 }
 
+export function getBrokerageByCustomDomain(customDomain: string): Brokerage | undefined {
+  const normalized = customDomain.trim().toLowerCase();
+  return db.brokerages.find((item) => item.customDomain?.toLowerCase() === normalized);
+}
+
 export function listBrokerages(includeArchived = false): Brokerage[] {
   return includeArchived ? db.brokerages : db.brokerages.filter((item) => !item.isArchived);
 }
@@ -149,7 +166,14 @@ export function updateBrokerage(input: {
   shortName?: string;
   senderName?: string;
   senderEmail?: string;
+  senderDomain?: string;
+  senderDomainStatus?: Brokerage["senderDomainStatus"];
+  senderDomainVerifiedAt?: string;
   portalBaseUrl?: string;
+  customDomain?: string;
+  domainStatus?: Brokerage["domainStatus"];
+  domainVerificationToken?: string;
+  domainVerifiedAt?: string;
   driveParentFolderId?: string;
   isArchived?: boolean;
   branding?: Partial<Brokerage["branding"]>;
@@ -159,7 +183,18 @@ export function updateBrokerage(input: {
   if (input.shortName !== undefined) brokerage.shortName = input.shortName;
   if (input.senderName !== undefined) brokerage.senderName = input.senderName;
   if (input.senderEmail !== undefined) brokerage.senderEmail = input.senderEmail;
+  if (input.senderDomain !== undefined) brokerage.senderDomain = input.senderDomain || undefined;
+  if (input.senderDomainStatus !== undefined) brokerage.senderDomainStatus = input.senderDomainStatus;
+  if (input.senderDomainVerifiedAt !== undefined) {
+    brokerage.senderDomainVerifiedAt = input.senderDomainVerifiedAt || undefined;
+  }
   if (input.portalBaseUrl !== undefined) brokerage.portalBaseUrl = input.portalBaseUrl;
+  if (input.customDomain !== undefined) brokerage.customDomain = input.customDomain || undefined;
+  if (input.domainStatus !== undefined) brokerage.domainStatus = input.domainStatus;
+  if (input.domainVerificationToken !== undefined) {
+    brokerage.domainVerificationToken = input.domainVerificationToken || undefined;
+  }
+  if (input.domainVerifiedAt !== undefined) brokerage.domainVerifiedAt = input.domainVerifiedAt || undefined;
   if (input.driveParentFolderId !== undefined) brokerage.driveParentFolderId = input.driveParentFolderId;
   if (input.isArchived !== undefined) {
     brokerage.isArchived = input.isArchived;
@@ -178,7 +213,14 @@ export function createBrokerage(input: {
   shortName?: string;
   senderName: string;
   senderEmail: string;
+  senderDomain?: string;
+  senderDomainStatus?: Brokerage["senderDomainStatus"];
+  senderDomainVerifiedAt?: string;
   portalBaseUrl: string;
+  customDomain?: string;
+  domainStatus?: Brokerage["domainStatus"];
+  domainVerificationToken?: string;
+  domainVerifiedAt?: string;
   driveParentFolderId?: string;
   isArchived?: boolean;
   branding?: Partial<Brokerage["branding"]>;
@@ -195,7 +237,14 @@ export function createBrokerage(input: {
     shortName: input.shortName,
     senderName: input.senderName,
     senderEmail: input.senderEmail,
+    senderDomain: input.senderDomain,
+    senderDomainStatus: input.senderDomainStatus ?? "NOT_CONFIGURED",
+    senderDomainVerifiedAt: input.senderDomainVerifiedAt,
     portalBaseUrl: input.portalBaseUrl,
+    customDomain: input.customDomain,
+    domainStatus: input.domainStatus ?? "NOT_CONFIGURED",
+    domainVerificationToken: input.domainVerificationToken,
+    domainVerifiedAt: input.domainVerifiedAt,
     driveParentFolderId: input.driveParentFolderId,
     isArchived: input.isArchived ?? false,
     archivedAt: input.isArchived ? nowIso() : undefined,
@@ -280,7 +329,11 @@ export function getActiveSessionByClient(clientId: string): IntakeSession | unde
   return db.intake_sessions.find((item) => item.clientId === clientId);
 }
 
-export function createIntakeSessionForClient(clientId: string, brokerageId: string): IntakeSession {
+export function createIntakeSessionForClient(
+  clientId: string,
+  brokerageId: string,
+  intakeTemplate: IntakeTemplateKey = DEFAULT_INTAKE_TEMPLATE,
+): IntakeSession {
   const existing = getActiveSessionByClient(clientId);
   if (existing) {
     return existing;
@@ -290,9 +343,10 @@ export function createIntakeSessionForClient(clientId: string, brokerageId: stri
     id: newId("session"),
     clientId,
     brokerageId,
+    intakeTemplate,
     status: "INVITED",
     currentStep: 1,
-    totalSteps: INTAKE_STEP_DEFINITIONS.length,
+    totalSteps: getIntakeStepDefinitions(intakeTemplate).length,
     completionPct: 0,
     missingItems: [],
     createdAt: nowIso(),
@@ -302,7 +356,7 @@ export function createIntakeSessionForClient(clientId: string, brokerageId: stri
   db.intake_sessions.push(session);
 
   db.intake_steps.push(
-    ...INTAKE_STEP_DEFINITIONS.map((step, index) => ({
+    ...getIntakeStepDefinitions(intakeTemplate).map((step, index) => ({
       id: newId("step"),
       sessionId: session.id,
       stepKey: step.key,
