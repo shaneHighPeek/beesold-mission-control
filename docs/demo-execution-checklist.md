@@ -65,11 +65,11 @@ Pass condition:
 
 ### Step D - Real invite proof
 
-- [ ] From broker pipeline, create a real test client (or resend invite).
-- [ ] Confirm email is received from broker branded sender.
-- [ ] Check DB table `outbound_emails`:
-- [ ] `provider_status = 'SENT'`
-- [ ] `from_email` uses broker domain
+- [x] From broker pipeline, create a real test client (or resend invite).
+- [x] Confirm email is received from broker branded sender.
+- [x] Check DB table `outbound_emails`:
+- [x] `provider_status = 'SENT'`
+- [x] `from_email` uses broker domain
 
 Pass condition:
 
@@ -77,16 +77,16 @@ Pass condition:
 
 ## 3) Demo Flow Checks (After Go Live Setup)
 
-- [ ] Broker can sign in at `/broker/sign-in`.
-- [ ] Broker can see their pipeline kanban and timers.
-- [ ] Broker can add a client and invite sends.
-- [ ] Listing type works for both:
-- [ ] `OMG_V1`
-- [ ] `COMMERCIAL_V1`
-- [ ] Commercial intake shows 6 phases.
-- [ ] Save and resume works.
-- [ ] Mission Control shows the same client/session updates.
-- [ ] Branding changes (logo/colors/sender/footer) show in portal and emails.
+- [x] Broker can sign in at `/broker/sign-in`.
+- [x] Broker can see their pipeline kanban and timers.
+- [x] Broker can add a client and invite sends.
+- [x] Listing type works for both:
+- [x] `OMG_V1`
+- [x] `COMMERCIAL_V1`
+- [x] Commercial intake shows 6 phases.
+- [x] Save and resume works.
+- [x] Mission Control shows the same client/session updates.
+- [x] Branding changes (logo/colors/sender/footer) show in portal and emails.
 
 Pass condition:
 
@@ -110,6 +110,7 @@ Before closing, do these 3 things:
 
 - 2026-03-10: Checklist rewritten in simpler step-by-step format.
 - 2026-03-10: Step A complete and Step B complete (TXT/CNAME/TLS all PASS on broker domain).
+- 2026-03-10: Step C complete (sender domain verified), Step D complete (real branded invite sent), demo flow checks completed.
 
 ### Next Action
 

@@ -28,16 +28,13 @@ type PipelineItem = {
   statusEnteredAt: string;
 };
 
-const COLUMNS: Array<{ status: IntakeStatus; label: string }> = [
-  { status: "INVITED", label: "Invited" },
-  { status: "IN_PROGRESS", label: "In Progress" },
-  { status: "PARTIAL_SUBMITTED", label: "Partial Submitted" },
-  { status: "MISSING_ITEMS_REQUESTED", label: "Missing Items" },
-  { status: "FINAL_SUBMITTED", label: "Final Submitted" },
-  { status: "KLOR_SYNTHESIS", label: "Klor" },
-  { status: "COUNCIL_RUNNING", label: "Council" },
-  { status: "REPORT_READY", label: "Report Ready" },
-  { status: "APPROVED", label: "Approved" },
+const COLUMNS: Array<{ label: string; statuses: IntakeStatus[] }> = [
+  { label: "Sent", statuses: ["INVITED"] },
+  { label: "In Progress", statuses: ["IN_PROGRESS", "PARTIAL_SUBMITTED", "MISSING_ITEMS_REQUESTED"] },
+  { label: "Final Submitted", statuses: ["FINAL_SUBMITTED"] },
+  { label: "Council", statuses: ["KLOR_SYNTHESIS", "COUNCIL_RUNNING"] },
+  { label: "Report Ready", statuses: ["REPORT_READY"] },
+  { label: "Approved", statuses: ["APPROVED"] },
 ];
 
 function formatDuration(ms: number): string {
@@ -215,7 +212,7 @@ export default function BrokerPipelinePage() {
   const grouped = useMemo(() => {
     return COLUMNS.map((column) => ({
       ...column,
-      cards: items.filter((item) => item.status === column.status),
+      cards: items.filter((item) => column.statuses.includes(item.status)),
     }));
   }, [items]);
 
@@ -325,7 +322,7 @@ export default function BrokerPipelinePage() {
         }}
       >
         {grouped.map((column) => (
-          <article key={column.status} className="card" style={{ minHeight: 220 }}>
+          <article key={column.label} className="card" style={{ minHeight: 220 }}>
             <h3 style={{ marginBottom: "0.5rem" }}>
               {column.label} ({column.cards.length})
             </h3>

@@ -571,6 +571,17 @@ export default function MissionControlPage() {
       return;
     }
 
+    let note: string | undefined;
+    if (decision === "REJECT") {
+      const entered = window.prompt("Enter rejection reason (required):", "");
+      const normalized = entered?.trim() ?? "";
+      if (!normalized) {
+        setMessage("Rejection reason is required.");
+        return;
+      }
+      note = normalized;
+    }
+
     const response = await fetch("/approval", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -578,7 +589,7 @@ export default function MissionControlPage() {
         sessionId: selectedSessionId,
         decision,
         operatorName: "Mission Control Operator",
-        note: decision === "REJECT" ? "Needs revisions" : undefined,
+        note,
       }),
     });
 
@@ -588,7 +599,11 @@ export default function MissionControlPage() {
       return;
     }
 
-    setMessage(decision === "APPROVE" ? "Report approved." : "Report sent back for revisions.");
+    setMessage(
+      decision === "APPROVE"
+        ? "Report approved."
+        : "Report rejected with reason and automatically re-submitted to Klor + Council.",
+    );
     await refresh();
   }
 

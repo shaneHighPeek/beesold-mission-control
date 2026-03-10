@@ -1,6 +1,7 @@
 import { isPostgresDriver } from "@/lib/persistence/driver";
 import {
   addAuditLog,
+  forceStatus,
   getAuditForSession,
   getBrokerageById,
   setClientArchived,
@@ -25,6 +26,7 @@ import {
 } from "@/lib/persistence/supabaseRest";
 import { sendInviteForSession } from "@/lib/services/onboardingService";
 import { requestMissingItems } from "@/lib/services/intakeService";
+import { runFullPipeline } from "@/lib/services/pipelineService";
 import { nowIso } from "@/lib/utils/id";
 
 export async function listMissionControlIntakes(options?: { includeArchived?: boolean; brokerageId?: string }) {
@@ -219,12 +221,24 @@ export async function processApproval(input: {
         });
       }
     } else {
+      const rejectionReason = (input.note ?? "").trim();
+      if (!rejectionReason) {
+        throw new Error("Rejection reason is required.");
+      }
+
       await forceStatusInSupabase(
         input.sessionId,
-        "IN_PROGRESS",
-        `Rejected by operator ${input.operatorName}: ${input.note ?? "Needs revisions"}`,
+        "FINAL_SUBMITTED",
+        `Rejected by operator ${input.operatorName}: ${rejectionReason}`,
         "OPERATOR",
       );
+
+      await addAuditLogInSupabase(input.sessionId, session.brokerageId, session.clientId, "OPERATOR", "REPORT_REJECTED", {
+        operatorName: input.operatorName,
+        rejectionReason,
+      });
+
+      await runFullPipeline(input.sessionId);
     }
 
     await addAuditLogInSupabase(input.sessionId, session.brokerageId, session.clientId, "OPERATOR", "REPORT_DECISION", {
@@ -261,12 +275,24 @@ export async function processApproval(input: {
       });
     }
   } else {
-    transitionSession(
+    const rejectionReason = (input.note ?? "").trim();
+    if (!rejectionReason) {
+      throw new Error("Rejection reason is required.");
+    }
+
+    forceStatus(
       input.sessionId,
-      "IN_PROGRESS",
-      `Rejected by operator ${input.operatorName}: ${input.note ?? "Needs revisions"}`,
+      "FINAL_SUBMITTED",
+      `Rejected by operator ${input.operatorName}: ${rejectionReason}`,
       "OPERATOR",
     );
+
+    addAuditLog(input.sessionId, session.brokerageId, session.clientId, "OPERATOR", "REPORT_REJECTED", {
+      operatorName: input.operatorName,
+      rejectionReason,
+    });
+
+    await runFullPipeline(input.sessionId);
   }
 
   addAuditLog(input.sessionId, session.brokerageId, session.clientId, "OPERATOR", "REPORT_DECISION", {
