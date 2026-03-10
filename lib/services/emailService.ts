@@ -47,6 +47,15 @@ function resolveEmailLogoUrl(logoUrl: string | undefined, magicLinkUrl: string):
   if (!logoUrl.startsWith("/")) {
     return logoUrl;
   }
+  const stableBaseUrl = process.env.NEXT_PUBLIC_APP_BASE_URL ?? process.env.DEFAULT_PORTAL_BASE_URL;
+  if (stableBaseUrl) {
+    try {
+      const origin = new URL(stableBaseUrl).origin;
+      return `${origin}${logoUrl}`;
+    } catch {
+      // fallback below
+    }
+  }
   try {
     const origin = new URL(magicLinkUrl).origin;
     return `${origin}${logoUrl}`;
