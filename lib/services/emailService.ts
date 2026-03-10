@@ -50,8 +50,12 @@ function resolveEmailLogoUrl(logoUrl: string | undefined, magicLinkUrl: string):
   const stableBaseUrl = process.env.NEXT_PUBLIC_APP_BASE_URL ?? process.env.DEFAULT_PORTAL_BASE_URL;
   if (stableBaseUrl) {
     try {
-      const origin = new URL(stableBaseUrl).origin;
-      return `${origin}${logoUrl}`;
+      const originUrl = new URL(stableBaseUrl);
+      const host = originUrl.hostname.toLowerCase();
+      const isLocalHost = host === "localhost" || host === "127.0.0.1";
+      if (!isLocalHost) {
+        return `${originUrl.origin}${logoUrl}`;
+      }
     } catch {
       // fallback below
     }
