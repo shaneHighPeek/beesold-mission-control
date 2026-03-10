@@ -39,6 +39,22 @@ function resolveSenderIdentity(brokerage: Brokerage): { fromName: string; fromEm
   };
 }
 
+function resolveEmailLogoUrl(logoUrl: string | undefined, magicLinkUrl: string): string | undefined {
+  if (!logoUrl) return undefined;
+  if (/^(https?:)?\/\//i.test(logoUrl) || logoUrl.startsWith("data:")) {
+    return logoUrl;
+  }
+  if (!logoUrl.startsWith("/")) {
+    return logoUrl;
+  }
+  try {
+    const origin = new URL(magicLinkUrl).origin;
+    return `${origin}${logoUrl}`;
+  } catch {
+    return logoUrl;
+  }
+}
+
 function renderWelcomeEmail(input: {
   brokerage: Brokerage;
   client: ClientIdentity;
@@ -46,8 +62,9 @@ function renderWelcomeEmail(input: {
 }): { subject: string; html: string } {
   const { brokerage, client, magicLinkUrl } = input;
   const supportLabel = brokerage.senderName;
-  const logoMarkup = brokerage.branding.logoUrl
-    ? `<img src="${brokerage.branding.logoUrl}" alt="${brokerage.name} logo" style="max-width:180px;height:auto;display:block;margin-bottom:14px;" />`
+  const logoUrl = resolveEmailLogoUrl(brokerage.branding.logoUrl, magicLinkUrl);
+  const logoMarkup = logoUrl
+    ? `<img src="${logoUrl}" alt="${brokerage.name} logo" style="max-width:180px;height:auto;display:block;margin-bottom:14px;" />`
     : "";
   const footerBranding = brokerage.branding.showBeeSoldBranding
     ? `<p style="font-size:12px;color:#6b7280;margin:6px 0 0;">Powered by BeeSold</p>`

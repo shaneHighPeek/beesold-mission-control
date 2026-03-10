@@ -28,6 +28,24 @@ import { sendWelcomeEmail } from "@/lib/services/emailService";
 import { ensureDriveFolder } from "@/lib/services/googleDriveService";
 import type { IntakeTemplateKey } from "@/lib/domain/types";
 
+function normalizeBaseUrl(raw: string): string {
+  const value = raw.trim();
+  if (!value) return value;
+  if (/^https?:\/\//i.test(value)) return value.replace(/\/+$/, "");
+  return `https://${value.replace(/\/+$/, "")}`;
+}
+
+function resolveInviteBaseUrl(input: {
+  portalBaseUrl: string;
+  customDomain?: string;
+  domainStatus?: "NOT_CONFIGURED" | "PENDING" | "VERIFIED" | "FAILED";
+}): string {
+  if (input.customDomain && input.domainStatus === "VERIFIED") {
+    return `https://${input.customDomain.replace(/\/+$/, "")}`;
+  }
+  return normalizeBaseUrl(input.portalBaseUrl);
+}
+
 export async function createOrUpdateClientOnboarding(input: {
   brokerageSlug: string;
   businessName: string;
@@ -173,7 +191,12 @@ export async function sendInviteForSession(sessionId: string): Promise<{ magicLi
     await ensureDriveFolder({ brokerage, client, session });
 
     const { rawToken } = await issueMagicLinkForSession(session.id);
-    const magicLinkUrl = `${brokerage.portalBaseUrl}/portal/auth/magic?token=${encodeURIComponent(rawToken)}`;
+    const inviteBaseUrl = resolveInviteBaseUrl({
+      portalBaseUrl: brokerage.portalBaseUrl,
+      customDomain: brokerage.customDomain,
+      domainStatus: brokerage.domainStatus,
+    });
+    const magicLinkUrl = `${inviteBaseUrl}/portal/auth/magic?token=${encodeURIComponent(rawToken)}`;
 
     await sendWelcomeEmail({
       brokerage,
@@ -198,7 +221,12 @@ export async function sendInviteForSession(sessionId: string): Promise<{ magicLi
   ensureDriveFolder({ brokerage, client, session });
 
   const { rawToken } = await issueMagicLinkForSession(session.id);
-  const magicLinkUrl = `${brokerage.portalBaseUrl}/portal/auth/magic?token=${encodeURIComponent(rawToken)}`;
+  const inviteBaseUrl = resolveInviteBaseUrl({
+    portalBaseUrl: brokerage.portalBaseUrl,
+    customDomain: brokerage.customDomain,
+    domainStatus: brokerage.domainStatus,
+  });
+  const magicLinkUrl = `${inviteBaseUrl}/portal/auth/magic?token=${encodeURIComponent(rawToken)}`;
 
   await sendWelcomeEmail({
     brokerage,
