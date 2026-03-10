@@ -90,6 +90,8 @@ Production URL: `https://app.beesold.hpp-cloud.com`
 - `BROKER_PORTAL_PASSWORD` (fallback single password when `BROKER_PORTAL_USERS` is not set; email must match brokerage sender email)
 - `BROKER_CUSTOM_DOMAIN_CNAME_TARGET` (optional, default `cname.vercel-dns.com`; CNAME target shown in broker DNS instructions)
 - `EMAIL_DOMAIN_DKIM_SELECTORS` (optional CSV selectors for DNS verify, e.g. `pm._domainkey` or `s1._domainkey,s2._domainkey`)
+- `POSTMARK_RETURN_PATH_PREFIX` (optional, default `pm-bounces`; used for Postmark return-path DNS verification)
+- `POSTMARK_RETURN_PATH_TARGET` (optional, default `pm.mtasv.net`; used for Postmark return-path DNS verification)
 - `REQUIRE_VERIFIED_SENDER_DOMAIN` (`true` to force fallback sender until sender-domain is verified)
 - `EMAIL_FALLBACK_FROM_EMAIL` (fallback sender address when `REQUIRE_VERIFIED_SENDER_DOMAIN=true` and sender domain is not verified)
 

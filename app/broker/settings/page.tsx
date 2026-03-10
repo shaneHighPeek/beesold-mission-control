@@ -53,14 +53,17 @@ export default function BrokerSettingsPage() {
   } | null>(null);
   const [emailInstructions, setEmailInstructions] = useState<{
     provider: "postmark" | "sendgrid" | "stub";
-    spf: { host: string; type: "TXT"; value: string };
+    spf: { host: string; type: "TXT"; value: string; required: boolean };
     dmarc: { host: string; type: "TXT"; value: string };
+    returnPath?: { host: string; type: "CNAME"; value: string; required: boolean };
     dkim: Array<{ host: string; type: "CNAME/TXT"; valueHint: string }>;
   } | null>(null);
   const [emailChecks, setEmailChecks] = useState<{
     spfVerified: boolean;
+    spfRequired: boolean;
     dmarcVerified: boolean;
     dkimVerified: boolean;
+    returnPathVerified: boolean;
   } | null>(null);
   const [domainChecks, setDomainChecks] = useState<{
     txtVerified: boolean;
@@ -128,8 +131,9 @@ export default function BrokerSettingsPage() {
         data?: {
           instructions: {
             provider: "postmark" | "sendgrid" | "stub";
-            spf: { host: string; type: "TXT"; value: string };
+            spf: { host: string; type: "TXT"; value: string; required: boolean };
             dmarc: { host: string; type: "TXT"; value: string };
+            returnPath?: { host: string; type: "CNAME"; value: string; required: boolean };
             dkim: Array<{ host: string; type: "CNAME/TXT"; valueHint: string }>;
           };
         };
@@ -308,11 +312,18 @@ export default function BrokerSettingsPage() {
         ok: boolean;
         data?: {
           brokerage: BrokerageTheme;
-          checks: { spfVerified: boolean; dmarcVerified: boolean; dkimVerified: boolean };
+          checks: {
+            spfVerified: boolean;
+            spfRequired: boolean;
+            dmarcVerified: boolean;
+            dkimVerified: boolean;
+            returnPathVerified: boolean;
+          };
           instructions: {
             provider: "postmark" | "sendgrid" | "stub";
-            spf: { host: string; type: "TXT"; value: string };
+            spf: { host: string; type: "TXT"; value: string; required: boolean };
             dmarc: { host: string; type: "TXT"; value: string };
+            returnPath?: { host: string; type: "CNAME"; value: string; required: boolean };
             dkim: Array<{ host: string; type: "CNAME/TXT"; valueHint: string }>;
           };
         };
@@ -328,7 +339,7 @@ export default function BrokerSettingsPage() {
       setMessage(
         payload.data.brokerage.senderDomainStatus === "VERIFIED"
           ? "Sender domain verified."
-          : "Sender domain verification failed. Review SPF/DKIM/DMARC records.",
+          : "Sender domain verification failed. Review DMARC, Return-Path, and DKIM records.",
       );
     } finally {
       setDomainBusy(false);
@@ -358,7 +369,8 @@ export default function BrokerSettingsPage() {
       <section className="card" style={{ marginBottom: "1rem" }}>
         <h3 style={{ marginBottom: "0.5rem" }}>Branded Email Domain</h3>
         <p className="small" style={{ marginBottom: "0.65rem" }}>
-          Verify your sender domain DNS records (SPF, DKIM, DMARC) so invites send from your branded email domain.
+          Verify your sender DNS so invites send from your branded email domain. Update <strong>Sender Email</strong> in{" "}
+          <a href="#branding-details">Branding Details</a>, then click <strong>Save Branding</strong> before verifying.
         </p>
         <div style={{ display: "grid", gap: "0.5rem", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
           <label className="field">
@@ -391,11 +403,22 @@ export default function BrokerSettingsPage() {
             <div className="card" style={{ borderRadius: 12 }}>
               <p className="small"><strong>{emailInstructions.spf.type}</strong> {emailInstructions.spf.host}</p>
               <p className="small">{emailInstructions.spf.value}</p>
+              <p className="small">
+                {emailInstructions.spf.required
+                  ? "Required"
+                  : "Optional for Postmark subdomain mode (recommended for alignment)."}
+              </p>
             </div>
             <div className="card" style={{ borderRadius: 12 }}>
               <p className="small"><strong>{emailInstructions.dmarc.type}</strong> {emailInstructions.dmarc.host}</p>
               <p className="small">{emailInstructions.dmarc.value}</p>
             </div>
+            {emailInstructions.returnPath ? (
+              <div className="card" style={{ borderRadius: 12 }}>
+                <p className="small"><strong>{emailInstructions.returnPath.type}</strong> {emailInstructions.returnPath.host}</p>
+                <p className="small">{emailInstructions.returnPath.value}</p>
+              </div>
+            ) : null}
             {emailInstructions.dkim.map((record) => (
               <div key={record.host} className="card" style={{ borderRadius: 12 }}>
                 <p className="small"><strong>{record.type}</strong> {record.host}</p>
@@ -406,14 +429,17 @@ export default function BrokerSettingsPage() {
         ) : null}
         {emailChecks ? (
           <div style={{ marginTop: "0.75rem", display: "grid", gap: "0.25rem" }}>
-            <p className="small">SPF: {emailChecks.spfVerified ? "PASS" : "FAIL"}</p>
+            <p className="small">
+              SPF{emailChecks.spfRequired ? "" : " (optional)"}: {emailChecks.spfVerified ? "PASS" : "FAIL"}
+            </p>
             <p className="small">DMARC: {emailChecks.dmarcVerified ? "PASS" : "FAIL"}</p>
+            <p className="small">Return-Path: {emailChecks.returnPathVerified ? "PASS" : "FAIL"}</p>
             <p className="small">DKIM: {emailChecks.dkimVerified ? "PASS" : "FAIL"}</p>
           </div>
         ) : null}
       </section>
 
-      <section className="card" style={{ marginBottom: "1rem" }}>
+      <section id="branding-details" className="card" style={{ marginBottom: "1rem" }}>
         <h3 style={{ marginBottom: "0.5rem" }}>Custom Domain and DNS</h3>
         <p className="small" style={{ marginBottom: "0.65rem" }}>
           Configure your white-label domain (for example `portal.yourbrokerage.com`) and verify DNS ownership.

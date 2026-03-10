@@ -59,7 +59,18 @@ async function hasCnameRecord(host: string, target: string): Promise<boolean> {
   try {
     const records = await resolveCname(host);
     const normalizedTarget = target.replace(/\.$/, "").toLowerCase();
-    return records.some((record) => record.replace(/\.$/, "").toLowerCase() === normalizedTarget);
+    return records.some((record) => {
+      const normalizedRecord = record.replace(/\.$/, "").toLowerCase();
+      if (normalizedRecord === normalizedTarget) {
+        return true;
+      }
+
+      // Vercel can issue per-domain targets like "<hash>.vercel-dns-017.com".
+      // Accept those when expected target is a vercel-dns host to avoid false fails.
+      const isExpectedVercel = normalizedTarget.includes("vercel-dns");
+      const isRecordVercel = /(^|[.-])vercel-dns(?:-\d+)?\.com$/.test(normalizedRecord);
+      return isExpectedVercel && isRecordVercel;
+    });
   } catch {
     return false;
   }
