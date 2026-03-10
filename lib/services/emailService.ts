@@ -39,32 +39,31 @@ function resolveSenderIdentity(brokerage: Brokerage): { fromName: string; fromEm
   };
 }
 
-function resolveEmailLogoUrl(logoUrl: string | undefined, magicLinkUrl: string): string | undefined {
+function resolveEmailLogoUrl(input: {
+  logoUrl: string | undefined;
+  brokerageSlug: string;
+  magicLinkUrl: string;
+}): string | undefined {
+  const { logoUrl, brokerageSlug, magicLinkUrl } = input;
   if (!logoUrl) return undefined;
-  if (/^(https?:)?\/\//i.test(logoUrl) || logoUrl.startsWith("data:")) {
-    return logoUrl;
-  }
-  if (!logoUrl.startsWith("/")) {
-    return logoUrl;
-  }
+
+  const logoPath = `/api/public/brokerage-logo/${encodeURIComponent(brokerageSlug)}`;
   const stableBaseUrl = process.env.NEXT_PUBLIC_APP_BASE_URL ?? process.env.DEFAULT_PORTAL_BASE_URL;
   if (stableBaseUrl) {
     try {
       const originUrl = new URL(stableBaseUrl);
       const host = originUrl.hostname.toLowerCase();
       const isLocalHost = host === "localhost" || host === "127.0.0.1";
-      if (!isLocalHost) {
-        return `${originUrl.origin}${logoUrl}`;
-      }
+      if (!isLocalHost) return `${originUrl.origin}${logoPath}`;
     } catch {
       // fallback below
     }
   }
   try {
     const origin = new URL(magicLinkUrl).origin;
-    return `${origin}${logoUrl}`;
+    return `${origin}${logoPath}`;
   } catch {
-    return logoUrl;
+    return undefined;
   }
 }
 
@@ -75,7 +74,11 @@ function renderWelcomeEmail(input: {
 }): { subject: string; html: string } {
   const { brokerage, client, magicLinkUrl } = input;
   const supportLabel = brokerage.senderName;
-  const logoUrl = resolveEmailLogoUrl(brokerage.branding.logoUrl, magicLinkUrl);
+  const logoUrl = resolveEmailLogoUrl({
+    logoUrl: brokerage.branding.logoUrl,
+    brokerageSlug: brokerage.slug,
+    magicLinkUrl,
+  });
   const logoMarkup = logoUrl
     ? `<img src="${logoUrl}" alt="${brokerage.name} logo" style="max-width:180px;height:auto;display:block;margin-bottom:14px;" />`
     : "";

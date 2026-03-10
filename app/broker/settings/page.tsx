@@ -189,6 +189,26 @@ export default function BrokerSettingsPage() {
     }
   }
 
+  async function clearLogo() {
+    setForm((prev) => ({ ...prev, logoUrl: "" }));
+    setMessage("Logo cleared in form. Click Save Branding to apply.");
+  }
+
+  async function handleLogoUpload(file: File | undefined) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      if (!result) {
+        setMessage("Unable to read logo file.");
+        return;
+      }
+      setForm((prev) => ({ ...prev, logoUrl: result }));
+      setMessage("Logo uploaded in form. Click Save Branding to apply.");
+    };
+    reader.readAsDataURL(file);
+  }
+
   async function configureDomain() {
     if (!brokerage) return;
     setDomainBusy(true);
@@ -556,6 +576,10 @@ export default function BrokerSettingsPage() {
               />
             </label>
             <label className="field">
+              <span>Or Upload Logo File</span>
+              <input type="file" accept="image/*" onChange={(event) => handleLogoUpload(event.target.files?.[0])} />
+            </label>
+            <label className="field">
               <span>Primary Color</span>
               <input
                 type="color"
@@ -579,6 +603,12 @@ export default function BrokerSettingsPage() {
                 rows={4}
               />
             </label>
+            <div style={{ gridColumn: "1 / -1", display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <button className="secondary" type="button" onClick={clearLogo}>
+                Clear Logo
+              </button>
+              <span className="small">After upload or clear, click Save Branding.</span>
+            </div>
           </div>
         )}
         <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem" }}>
