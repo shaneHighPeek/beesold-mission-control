@@ -850,6 +850,26 @@ export default function MissionControlPage() {
                 <div className="card" style={{ background: "#f7fbf7" }}>
                   <strong>Actions</strong>
                   <div className="row" style={{ marginTop: "0.55rem" }}>
+                    <a
+                      className="secondary"
+                      href={`/api/mission-control/intakes/${selected.id}/qa-download`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Download Q&A
+                    </a>
+                    {(selected.status === "REPORT_READY" || selected.status === "APPROVED") ? (
+                      <a
+                        className="secondary"
+                        href={`/api/mission-control/intakes/${selected.id}/report-download`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Download Report
+                      </a>
+                    ) : null}
+                  </div>
+                  <div className="row" style={{ marginTop: "0.55rem" }}>
                     <button className="secondary" onClick={() => invokeAction("resend-invite")} disabled={!canAdmin}>
                       Resend Invite
                     </button>
@@ -883,26 +903,6 @@ export default function MissionControlPage() {
                       <button className="warn" onClick={() => submitReportDecision("REJECT")} disabled={!canAdmin}>
                         Reject Report
                       </button>
-                      <a
-                        className="secondary"
-                        href={`/api/mission-control/intakes/${selected.id}/report-download`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Download Report
-                      </a>
-                    </div>
-                  ) : null}
-                  {selected.status === "APPROVED" ? (
-                    <div className="row" style={{ marginTop: "0.75rem" }}>
-                      <a
-                        className="secondary"
-                        href={`/api/mission-control/intakes/${selected.id}/report-download`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Download Report
-                      </a>
                     </div>
                   ) : null}
                 </div>
