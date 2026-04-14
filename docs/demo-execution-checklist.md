@@ -1,13 +1,27 @@
 # BeeSold Demo Checklist (Simple Version)
 
-Last updated: 2026-03-10 (evening)
+Last updated: 2026-04-14
 
 Use this like a run sheet. Start at the top and tick boxes in order.
 
+## 0) Send-To-Client Ready (5-Minute Preflight)
+
+Do this before sending any live client invite:
+
+- [ ] In Mission Control, create client under the correct brokerage.
+- [ ] Confirm brokerage sender email + portal domain look correct in broker settings.
+- [ ] Send invite and confirm email delivered.
+- [ ] Open the magic link from the email once and confirm intake page loads.
+- [ ] Confirm session card appears in broker pipeline and Mission Control.
+
+Pass condition:
+
+- You can send one invite and confirm the client can open the intake link successfully.
+
 ## 1) What We Are Doing Right Now
 
-- Current target: get **one broker fully live** (branded domain + branded email + real invite sent).
-- When this is done, move to section 3 (demo flow checks).
+- Current target: run **manual but reliable delivery** for OMG.
+- This means: invite client -> client completes intake -> download Q&A -> run report manually -> client feedback -> final approval.
 
 ## 2) Go Live Setup (Do In This Exact Order)
 
@@ -75,7 +89,23 @@ Pass condition:
 
 - Real invite sent successfully with branded sender.
 
-## 3) Demo Flow Checks (After Go Live Setup)
+## 3) Manual Processing Flow (Current Operating Model)
+
+When client submits final intake:
+
+- [ ] In Mission Control, open the listing and click **Download Client Q&A**.
+- [ ] Save/export the generated report from your manual report workflow (Claude/council process).
+- [ ] Upload/store the report in your working folder.
+- [ ] If report is available in BeeSold, click **Download Report**.
+- [ ] Send report to client for review.
+- [ ] If rejected, capture reason and re-run report workflow.
+- [ ] If approved, move listing forward to production/assets.
+
+Pass condition:
+
+- You can produce deliverables from one completed intake with full traceability (Q&A file + report file + approval/rejection note).
+
+## 4) Demo Flow Checks (After Go Live Setup)
 
 - [x] Broker can sign in at `/broker/sign-in`.
 - [x] Broker can see their pipeline kanban and timers.
@@ -92,13 +122,13 @@ Pass condition:
 
 - You can run one clean end-to-end demo without engineering help.
 
-## 4) Nice-To-Have After Demo
+## 5) Nice-To-Have After Demo
 
 - [ ] Auth hardening evidence complete (rate limits + tenant isolation tests).
 - [ ] Full QA/UAT signoff recorded.
 - [ ] Go-live rollback runbook tested.
 
-## 5) If You Stop For The Day
+## 6) If You Stop For The Day
 
 Before closing, do these 3 things:
 
@@ -111,6 +141,7 @@ Before closing, do these 3 things:
 - 2026-03-10: Checklist rewritten in simpler step-by-step format.
 - 2026-03-10: Step A complete and Step B complete (TXT/CNAME/TLS all PASS on broker domain).
 - 2026-03-10: Step C complete (sender domain verified), Step D complete (real branded invite sent), demo flow checks completed.
+- 2026-04-14: Added send-to-client preflight and manual processing flow for sales-first operation.
 
 ### Next Action
 

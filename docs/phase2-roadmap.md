@@ -1,10 +1,18 @@
 # BeeSold Operational Roadmap
 
-Last updated: 2026-03-09
+Last updated: 2026-04-14
 
-This roadmap is the execution plan to move BeeSold Dashboard from current prototype behavior to fully operational production delivery for Off Market Group, then scale to additional brokerages.
+This roadmap is the execution plan to move BeeSold Dashboard from current prototype behavior to reliable production delivery for Off Market Group, then scale to additional brokerages.
 
 Execution tracker for day-by-day progress: `docs/demo-execution-checklist.md`
+
+## Operating Mode (Current)
+
+For the next few weeks, we are intentionally running a sales-first mode:
+
+- Primary goal: reliable intake capture and handoff for manual report production.
+- Full automation remains important, but is not a blocker for current OMG deals.
+- Success now: every completed intake can be exported cleanly (Client Q&A + report output) and tracked through approve/reject.
 
 ## Progress Snapshot (2026-02-20)
 
@@ -34,6 +42,7 @@ This section overrides normal sequencing for this week's brokerage client demo. 
 | DEMO-04 | P0 | IN_PROGRESS | Custom domain + DNS onboarding for white-label brokerages | DevOps + Backend | M | Brokerage can map branded portal domain (CNAME), pass ownership verification, and route traffic to tenant portal with TLS. |
 | DEMO-05 | P0 | IN_PROGRESS | Branded email domains per brokerage | DevOps + Backend | M | Brokerage sender domains verified (SPF/DKIM/DMARC), invites send from brokerage-branded `from` domain, and delivery status is auditable. |
 | DEMO-06 | P0 | DONE | Commercial property intake variant (new questionnaire) | Product + Frontend + Backend | M | New questionnaire variant can be selected per session/template, with separate question set + validation flow for commercial listings. |
+| DEMO-07 | P0 | DONE | Manual handoff support in Mission Control | Frontend + Backend | S | Mission Control provides prominent actions to download Client Q&A and Report files for manual processing and review. |
 
 ### Definition of Demo Ready (This Week)
 
@@ -46,6 +55,18 @@ Demo is ready when:
 - At least one brokerage custom domain is connected and serving TLS.
 - At least one brokerage branded sender domain is verified and sending invites in production-like mode.
 - Commercial questionnaire variant is accessible and persists responses independently from existing OMG intake.
+- Mission Control supports manual handoff with clear export actions for completed listings.
+
+## Immediate Practical Workflow (OMG)
+
+1. Create client under OMG brokerage.
+2. Send invite and confirm branded email delivery.
+3. Client completes intake.
+4. Download Client Q&A from Mission Control.
+5. Run manual council/report production workflow.
+6. Download/store report file and send to client.
+7. If rejected, record reason and rerun report process.
+8. If approved, proceed to production/assets.
 
 ## MVP Punchlist (Execution Board)
 
