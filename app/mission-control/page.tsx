@@ -883,6 +883,26 @@ export default function MissionControlPage() {
                       <button className="warn" onClick={() => submitReportDecision("REJECT")} disabled={!canAdmin}>
                         Reject Report
                       </button>
+                      <a
+                        className="secondary"
+                        href={`/api/mission-control/intakes/${selected.id}/report-download`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Download Report
+                      </a>
+                    </div>
+                  ) : null}
+                  {selected.status === "APPROVED" ? (
+                    <div className="row" style={{ marginTop: "0.75rem" }}>
+                      <a
+                        className="secondary"
+                        href={`/api/mission-control/intakes/${selected.id}/report-download`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Download Report
+                      </a>
                     </div>
                   ) : null}
                 </div>
