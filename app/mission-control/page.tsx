@@ -835,6 +835,40 @@ export default function MissionControlPage() {
                 <span className="badge">{selected.brokerage.name}</span>
               </div>
 
+              <div
+                className="card"
+                style={{ background: "#eef6ff", border: "1px solid #c8dcff", display: "grid", gap: "0.55rem" }}
+              >
+                <strong style={{ color: "#0f3266" }}>Downloads</strong>
+                <p className="small" style={{ margin: 0 }}>
+                  Export client answers and generated report files from here.
+                </p>
+                <div className="row" style={{ marginTop: "0.25rem", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <a
+                    className="primary"
+                    href={`/api/mission-control/intakes/${selected.id}/qa-download`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Download Client Q&A
+                  </a>
+                  {selected.status === "REPORT_READY" || selected.status === "APPROVED" ? (
+                    <a
+                      className="primary"
+                      href={`/api/mission-control/intakes/${selected.id}/report-download`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Download Report
+                    </a>
+                  ) : (
+                    <button className="secondary" type="button" disabled>
+                      Download Report (available in Report Ready)
+                    </button>
+                  )}
+                </div>
+              </div>
+
               <div className="grid two">
                 <div className="card" style={{ background: "#f8f9ff" }}>
                   <p className="small">Status: {selected.status}</p>
@@ -849,26 +883,6 @@ export default function MissionControlPage() {
 
                 <div className="card" style={{ background: "#f7fbf7" }}>
                   <strong>Actions</strong>
-                  <div className="row" style={{ marginTop: "0.55rem" }}>
-                    <a
-                      className="secondary"
-                      href={`/api/mission-control/intakes/${selected.id}/qa-download`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Download Q&A
-                    </a>
-                    {(selected.status === "REPORT_READY" || selected.status === "APPROVED") ? (
-                      <a
-                        className="secondary"
-                        href={`/api/mission-control/intakes/${selected.id}/report-download`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Download Report
-                      </a>
-                    ) : null}
-                  </div>
                   <div className="row" style={{ marginTop: "0.55rem" }}>
                     <button className="secondary" onClick={() => invokeAction("resend-invite")} disabled={!canAdmin}>
                       Resend Invite
